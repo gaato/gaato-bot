@@ -121,9 +121,14 @@ class AudioStatus:
         if self.vc:
             await self.vc.disconnect()
             self.vc = None
-        for p in glob.glob('youtube-*'):
-            if os.path.isfile(p):
-                os.remove(p)
+        flag = True
+        for g in client.guilds:
+            if g.voice_client is not None:
+                flag = False
+        if flag:
+            for p in glob.glob('youtube-*'):
+                if os.path.isfile(p):
+                    os.remove(p)
 
     @property
     def is_playing(self):
