@@ -18,13 +18,13 @@ GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
 def get_videos_search(keyword):
     youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-    youtube_query = youtube.search().list(q=keyword, part='id', maxResults=1)
+    youtube_query = youtube.search().list(q=keyword, part='id,snippet', maxResults=1)
     youtube_res = youtube_query.execute()
     return youtube_res.get('items', [])
 
 def get_videos_from_playlist(playlist_id):
     youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-    yotube_query = youtube.playlistItems().list(playlistId=playlist_id, part='contentDetails', maxResults=50)
+    yotube_query = youtube.playlistItems().list(playlistId=playlist_id, part='snippet,contentDetails', maxResults=50)
     youtube_res = yotube_query.execute()
     return youtube_res.get('items', [])
 
@@ -114,19 +114,19 @@ class AudioStatus:
     async def playing_task(self):
         while True:
             try:
-                player, url = await asyncio.wait_for(self.queue.get(), timeout=180)
+                title, url = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
             while True:
                 self.playing.clear()
+                player = await YTDLSource.from_url(url, loop=client.loop)
                 self.vc.play(player, after=self.play_next)
-                await self.ctx.send(f'{player.title}を再生します...')
+                await self.ctx.send(f'{title}を再生します...')
                 await self.playing.wait()
                 if self.loop:
                     player = await YTDLSource.from_url(url, loop=client.loop)
                 elif self.loopqueue:
-                    last_player = await YTDLSource.from_url(url, loop=client.loop)
-                    await self.add_audio(last_player, url)
+                    await self.add_audio(title, url)
                     break
                 else:
                     break
@@ -179,20 +179,23 @@ class Voice(commands.Cog):
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
-            url_list = [url_or_keyword]
+            result = get_videos_search(url_or_keyword)
+            videos = [(result[0]['snippet']['title'], 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'])]
         elif m := re.match(r'https?://((www|m)\.)?youtube\.com/playlist\?list=', url_or_keyword):
             playlist_id = url_or_keyword.replace(m.group(), '')
             result = get_videos_from_playlist(playlist_id)
-            url_list = []
+            videos = []
             for r in result:
-                url_list.append('https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'])
+                videos.append((r['snippet']['title'], 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId']))
         else:
             result = get_videos_search(url_or_keyword)
-            url_list = ['https://www.youtube.com/watch?v=' + result[0]['id']['videoId']]
-        for url in url_list:
-            player = await YTDLSource.from_url(url, loop=client.loop)
-            await status.add_audio(player, url)
-            await ctx.send(f'{player.title}を再生リストに追加しました')
+            videos = [(result[0]['snippet']['title'], 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'])]
+        for title, url in videos:
+            await status.add_audio(title, url)
+        if len(videos) == 1:
+            await ctx.send(f'{title}を再生リストに追加しました')
+        else:
+            await ctx.send(f'{len(videos)}曲を再生リストに追加しました')
 
     @commands.command()
     async def skip(self, ctx: commands.Context):
@@ -223,8 +226,11 @@ class Voice(commands.Cog):
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
         songs = ""
-        for i, (player, _) in enumerate(queue):
-            songs += f"{i + 1}. {player.title}\n"
+        for i, (title, _) in enumerate(queue):
+            songs += f"{i + 1}. {title}\n"
+            if i >= 19:
+                songs += '...'
+                break
         await ctx.send(songs)
 
     @commands.command()
