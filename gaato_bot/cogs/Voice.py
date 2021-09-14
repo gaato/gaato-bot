@@ -81,24 +81,35 @@ class AudioStatus:
         self.ctx: commands.Context = ctx
         self.queue = AudioQueue()
         self.playing = asyncio.Event()
+        self.loop = False
+        self.loopqueue = False
         asyncio.create_task(self.playing_task())
 
-    async def add_audio(self, player):
-        await self.queue.put(player)
+    async def add_audio(self, player, url):
+        await self.queue.put((player, url))
 
     def get_list(self):
         return self.queue.to_list()
 
     async def playing_task(self):
         while True:
-            self.playing.clear()
             try:
-                player = await asyncio.wait_for(self.queue.get(), timeout=180)
+                player, url = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
-            self.vc.play(player, after=self.play_next)
-            await self.ctx.send(f'{player.title}を再生します...')
-            await self.playing.wait()
+            while True:
+                self.playing.clear()
+                self.vc.play(player, after=self.play_next)
+                await self.ctx.send(f'{player.title}を再生します...')
+                await self.playing.wait()
+                if self.loop:
+                    player = await YTDLSource.from_url(url, loop=client.loop)
+                elif self.loopqueue:
+                    last_player = await YTDLSource.from_url(url, loop=client.loop)
+                    await self.add_audio(last_player, url)
+                    break
+                else:
+                    break
 
     def play_next(self, err=None):
         self.playing.set()
@@ -113,8 +124,9 @@ class AudioStatus:
     def is_playing(self):
         return self.vc.is_playing()
 
-    def stop(self):
+    def skip(self):
         self.vc.stop()
+        self.play_next()
 
 
 class Voice(commands.Cog):
@@ -137,7 +149,7 @@ class Voice(commands.Cog):
             await ctx.invoke(self.join)
             status = self.audio_statuses[ctx.guild.id]
         player = await YTDLSource.from_url(url, loop=client.loop)
-        await status.add_audio(player)
+        await status.add_audio(player, url)
         await ctx.send(f'{player.title}を再生リストに追加しました')
 
     @commands.command()
@@ -147,8 +159,8 @@ class Voice(commands.Cog):
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
         if not status.is_playing:
             return await ctx.send('既に停止しています')
-        await status.stop()
-        await ctx.send('停止しました')
+        await status.skip()
+        await ctx.send('スキップしました')
 
     @commands.command()
     async def disconnect(self, ctx: commands.Context):
@@ -165,7 +177,7 @@ class Voice(commands.Cog):
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
         songs = ""
-        for i, player in enumerate(queue):
+        for i, (player, _) in enumerate(queue):
             songs += f"{i + 1}. {player.title}\n"
         await ctx.send(songs)
 
@@ -182,9 +194,33 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
-        title = status.queue[idx - 1].title
+        title = status.queue[idx - 1][0].title
         status.queue.remove(idx - 1)
         return await ctx.send(f'{title}を削除しました')
+
+    @commands.command()
+    async def loop(self, ctx: commands.Context):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if status.loop:
+            status.loop = False
+            return await ctx.send('loopを無効にしました')
+        else:
+            status.loop = True
+            return await ctx.send('loopを有効にしました')
+
+    @commands.command()
+    async def loopqueue(self, ctx: commands.Context):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if status.loopqueue:
+            status.loopqueue = False
+            return await ctx.send('loopqueueを無効にしました')
+        else:
+            status.loopqueue = True
+            return await ctx.send('loopqueueを有効にしました')
 
 
 def setup(bot):
