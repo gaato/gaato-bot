@@ -176,6 +176,8 @@ class Voice(commands.Cog):
         if status is None:
             await ctx.invoke(self.join)
             status = self.audio_statuses[ctx.guild.id]
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
             url_list = [url_or_keyword]
         elif m := re.match(r'https?://((www|m)\.)?youtube\.com/playlist\?list=', url_or_keyword):
@@ -197,6 +199,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if not status.is_playing:
             return await ctx.send('既に停止しています')
         await status.skip()
@@ -207,6 +211,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('ボイスチャンネルにまだ未参加です')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         await status.leave()
         del self.audio_statuses[ctx.guild.id]
 
@@ -226,6 +232,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         status.queue.shuffle()
         return await ctx.send('シャッフルしました')
 
@@ -234,6 +242,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         title = status.queue[idx - 1][0].title
         status.queue.remove(idx - 1)
         return await ctx.send(f'{title}を削除しました')
@@ -243,6 +253,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if status.loop:
             status.loop = False
             return await ctx.send('loopを無効にしました')
@@ -255,6 +267,8 @@ class Voice(commands.Cog):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if status.loopqueue:
             status.loopqueue = False
             return await ctx.send('loopqueueを無効にしました')
