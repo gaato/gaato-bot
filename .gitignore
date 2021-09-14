@@ -129,4 +129,4 @@ dmypy.json
 .pyre/
 
 # youtube-dl
-*.m4a
+youtube-*

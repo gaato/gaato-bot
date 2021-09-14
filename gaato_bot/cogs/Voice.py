@@ -1,7 +1,6 @@
 import asyncio
-import os
-from glob import glob
 from typing import Dict
+import random
 
 import discord
 from gaato_bot.core.bot import GaatoBot
@@ -69,6 +68,12 @@ class AudioQueue(asyncio.Queue):
     def reset(self):
         self._queue.clear()
 
+    def shuffle(self):
+        random.shuffle(self._queue)
+
+    def remove(self, idx):
+        del self._queue[idx]
+
 
 class AudioStatus:
     def __init__(self, ctx: commands.Context, vc: discord.VoiceClient):
@@ -126,7 +131,7 @@ class Voice(commands.Cog):
         self.audio_statuses[ctx.guild.id] = AudioStatus(ctx, vc)
 
     @commands.command()
-    async def play(self, ctx: commands.Context, *, url: str = ''):
+    async def play(self, ctx: commands.Context, *, url: str):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             await ctx.invoke(self.join)
@@ -163,6 +168,23 @@ class Voice(commands.Cog):
         for i, player in enumerate(queue):
             songs += f"{i + 1}. {player.title}\n"
         await ctx.send(songs)
+
+    @commands.command()
+    async def shuffle(self, ctx: commands.Context):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        status.queue.shuffle()
+        return await ctx.send('シャッフルしました')
+
+    @commands.command()
+    async def remove(self, ctx: commands.Context, *, idx: int):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+        title = status.queue[idx - 1].title
+        status.queue.remove(idx - 1)
+        return await ctx.send(f'{title}を削除しました')
 
 
 def setup(bot):
