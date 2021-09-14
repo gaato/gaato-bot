@@ -1,2 +1,4 @@
 discord.py[voice]
 youtube_dl
+google-auth-oauthlib
+google-api-python-client

@@ -1,14 +1,32 @@
 import asyncio
-from typing import Dict
-import random
-import os
 import glob
+import os
+import random
+import re
+from typing import Dict
 
 import discord
-from gaato_bot.core.bot import GaatoBot
-from discord.ext import commands
 import youtube_dl
+from discord.ext import commands
+from dotenv import load_dotenv
+from gaato_bot.core.bot import GaatoBot
+from googleapiclient.discovery import build
 
+
+load_dotenv(verbose=True)
+GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+
+def get_videos_search(keyword):
+    youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
+    youtube_query = youtube.search().list(q=keyword, part='id', maxResults=1)
+    youtube_res = youtube_query.execute()
+    return youtube_res.get('items', [])
+
+def get_videos_from_playlist(playlist_id):
+    youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
+    yotube_query = youtube.playlistItems().list(playlistId=playlist_id, part='contentDetails', maxResults=50)
+    youtube_res = yotube_query.execute()
+    return youtube_res.get('items', [])
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -153,14 +171,26 @@ class Voice(commands.Cog):
         self.audio_statuses[ctx.guild.id] = AudioStatus(ctx, vc)
 
     @commands.command()
-    async def play(self, ctx: commands.Context, *, url: str):
+    async def play(self, ctx: commands.Context, *, url_or_keyword: str):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             await ctx.invoke(self.join)
             status = self.audio_statuses[ctx.guild.id]
-        player = await YTDLSource.from_url(url, loop=client.loop)
-        await status.add_audio(player, url)
-        await ctx.send(f'{player.title}を再生リストに追加しました')
+        if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
+            url_list = [url_or_keyword]
+        elif m := re.match(r'https?://((www|m)\.)?youtube\.com/playlist\?list=', url_or_keyword):
+            playlist_id = url_or_keyword.replace(m.group(), '')
+            result = get_videos_from_playlist(playlist_id)
+            url_list = []
+            for r in result:
+                url_list.append('https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'])
+        else:
+            result = get_videos_search(url_or_keyword)
+            url_list = ['https://www.youtube.com/watch?v=' + result[0]['id']['videoId']]
+        for url in url_list:
+            player = await YTDLSource.from_url(url, loop=client.loop)
+            await status.add_audio(player, url)
+            await ctx.send(f'{player.title}を再生リストに追加しました')
 
     @commands.command()
     async def skip(self, ctx: commands.Context):
