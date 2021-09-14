@@ -1,6 +1,8 @@
 import asyncio
 from typing import Dict
 import random
+import os
+import glob
 
 import discord
 from gaato_bot.core.bot import GaatoBot
@@ -119,6 +121,9 @@ class AudioStatus:
         if self.vc:
             await self.vc.disconnect()
             self.vc = None
+        for p in glob.glob('youtube-*'):
+            if os.path.isfile(p):
+                os.remove(p)
 
     @property
     def is_playing(self):
