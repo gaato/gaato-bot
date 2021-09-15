@@ -6,14 +6,14 @@ import traceback
 class GaatoBot(commands.Bot):
     def __init__(self, token):
         self.token = token
-        super().__init__(command_prefix=")")
+        super().__init__(command_prefix=')')
         self.load_cogs()
 
     def load_cogs(self):
-        cogs = ["gaato_bot.cogs.Voice"]
+        cogs = ['gaato_bot.cogs.Voice']
         for cog in cogs:
             self.load_extension(cog)
-            print(cog + "をロードしました")
+            print(cog + 'をロードしました')
 
     async def on_ready(self):
         print('起動しました')
@@ -23,9 +23,9 @@ class GaatoBot(commands.Bot):
         try:
             self.loop.run_until_complete(self.start(self.token))
         except discord.LoginFailure:
-            print("Discord Tokenが不正です")
+            print('Discord Tokenが不正です')
         except KeyboardInterrupt:
-            print("終了します")
+            print('終了します')
             self.loop.run_until_complete(self.logout())
         except:
             traceback.print_exc()

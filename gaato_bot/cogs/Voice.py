@@ -100,13 +100,13 @@ class AudioStatus:
         self.vc: discord.VoiceClient = vc
         self.ctx: commands.Context = ctx
         self.queue = AudioQueue()
-        self.playing = asyncio.Event()
+        self.done = asyncio.Event()
         self.loop = False
         self.loopqueue = False
         asyncio.create_task(self.playing_task())
 
-    async def add_audio(self, player, url):
-        await self.queue.put((player, url))
+    async def add_audio(self, video):
+        await self.queue.put(video)
 
     def get_list(self):
         return self.queue.to_list()
@@ -114,25 +114,25 @@ class AudioStatus:
     async def playing_task(self):
         while True:
             try:
-                title, url = await asyncio.wait_for(self.queue.get(), timeout=180)
+                video = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
             while True:
-                self.playing.clear()
-                player = await YTDLSource.from_url(url, loop=client.loop)
+                self.done.clear()
+                player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 self.vc.play(player, after=self.play_next)
-                await self.ctx.send(f'{title}を再生します...')
-                await self.playing.wait()
+                await self.ctx.send(f'{video["title"]}を再生します...')
+                await self.done.wait()
                 if self.loop:
-                    player = await YTDLSource.from_url(url, loop=client.loop)
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 elif self.loopqueue:
-                    await self.add_audio(title, url)
+                    await self.add_audio(video)
                     break
                 else:
                     break
 
     def play_next(self, err=None):
-        self.playing.set()
+        self.done.set()
 
     async def leave(self):
         self.queue.reset()
@@ -170,7 +170,7 @@ class Voice(commands.Cog):
         vc = await ctx.author.voice.channel.connect()
         self.audio_statuses[ctx.guild.id] = AudioStatus(ctx, vc)
 
-    @commands.command()
+    @commands.command(aliases=['p'])
     async def play(self, ctx: commands.Context, *, url_or_keyword: str):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
@@ -180,24 +180,39 @@ class Voice(commands.Cog):
             return await ctx.send('Botと同じボイスチャンネルに入ってください')
         if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
             result = get_videos_search(url_or_keyword)
-            videos = [(result[0]['snippet']['title'], 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'])]
+            videos = [{
+                'title': result[0]['snippet']['title'],
+                'url': 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'],
+                'thumbnail': result[0]['snippet']['thumbnails']['default']['url'],
+                'user': ctx.author,
+            }]
         elif m := re.match(r'https?://((www|m)\.)?youtube\.com/playlist\?list=', url_or_keyword):
             playlist_id = url_or_keyword.replace(m.group(), '')
             result = get_videos_from_playlist(playlist_id)
             videos = []
             for r in result:
-                videos.append((r['snippet']['title'], 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId']))
+                videos.append({
+                    'title': r['snippet']['title'],
+                    'url': 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'],
+                    'thumbnail': r['snippet']['thumbnails']['default']['url'],
+                    'user': ctx.author,
+                })
         else:
             result = get_videos_search(url_or_keyword)
-            videos = [(result[0]['snippet']['title'], 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'])]
-        for title, url in videos:
-            await status.add_audio(title, url)
+            videos = [{
+                'title': result[0]['snippet']['title'],
+                'url': 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'],
+                'thumbnail': result[0]['snippet']['thumbnails']['default']['url'],
+                'user': ctx.author,
+            }]
+        for video in videos:
+            await status.add_audio(video)
         if len(videos) == 1:
-            await ctx.send(f'{title}を再生リストに追加しました')
+            await ctx.send(f'{videos[0]["title"]}を再生リストに追加しました')
         else:
             await ctx.send(f'{len(videos)}曲を再生リストに追加しました')
 
-    @commands.command()
+    @commands.command(aliases=['s'])
     async def skip(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
@@ -209,7 +224,7 @@ class Voice(commands.Cog):
         await status.skip()
         await ctx.send('スキップしました')
 
-    @commands.command()
+    @commands.command(aliases=['dc'])
     async def disconnect(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
@@ -219,15 +234,15 @@ class Voice(commands.Cog):
         await status.leave()
         del self.audio_statuses[ctx.guild.id]
 
-    @commands.command()
+    @commands.command(aliases=['q'])
     async def queue(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
-        songs = ""
-        for i, (title, _) in enumerate(queue):
-            songs += f"{i + 1}. {title}\n"
+        songs = ''
+        for i, video in enumerate(queue):
+            songs += f'{i + 1}. {video["title"]}\n'
             if i >= 19:
                 songs += '...'
                 break
@@ -243,7 +258,7 @@ class Voice(commands.Cog):
         status.queue.shuffle()
         return await ctx.send('シャッフルしました')
 
-    @commands.command()
+    @commands.command(aliases=['rm'])
     async def remove(self, ctx: commands.Context, *, idx: int):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
@@ -268,7 +283,7 @@ class Voice(commands.Cog):
             status.loop = True
             return await ctx.send('loopを有効にしました')
 
-    @commands.command()
+    @commands.command(aliases=['lq'])
     async def loopqueue(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
