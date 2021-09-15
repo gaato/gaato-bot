@@ -334,5 +334,15 @@ class Voice(commands.Cog):
         embed.set_thumbnail(url=status.playing["thumbnail"])
         await ctx.send(embed=embed)
 
+    @commands.command(aliases=['cl'])
+    async def clear(self, ctx: commands.Context):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
+        status.queue.reset()
+        return await ctx.send('キューを削除しました')
+
 def setup(bot):
     return bot.add_cog(Voice(bot))
