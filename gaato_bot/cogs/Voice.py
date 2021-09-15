@@ -101,8 +101,9 @@ class AudioStatus:
         self.ctx: commands.Context = ctx
         self.queue = AudioQueue()
         self.done = asyncio.Event()
+        self.playing = {}
         self.loop = False
-        self.loopqueue = False
+        self.qloop = False
         asyncio.create_task(self.playing_task())
 
     async def add_audio(self, video):
@@ -122,10 +123,11 @@ class AudioStatus:
                 player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 self.vc.play(player, after=self.play_next)
                 await self.ctx.send(f'{video["title"]}を再生します...')
+                self.playing = video
                 await self.done.wait()
                 if self.loop:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
-                elif self.loopqueue:
+                elif self.qloop:
                     await self.add_audio(video)
                     break
                 else:
@@ -177,7 +179,7 @@ class Voice(commands.Cog):
             await ctx.invoke(self.join)
             status = self.audio_statuses[ctx.guild.id]
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
             result = get_videos_search(url_or_keyword)
             videos = [{
@@ -208,9 +210,19 @@ class Voice(commands.Cog):
         for video in videos:
             await status.add_audio(video)
         if len(videos) == 1:
-            await ctx.send(f'{videos[0]["title"]}を再生リストに追加しました')
+            embed = discord.Embed(
+                title=f'{discord.utils.escape_markdown(videos[0]["title"])} をキューに追加しました',
+                url=videos[0]["url"],
+            )
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+            embed.set_thumbnail(url=videos[0]['thumbnail'])
+            await ctx.send(embed=embed)
         else:
-            await ctx.send(f'{len(videos)}曲を再生リストに追加しました')
+            embed = discord.Embed(
+                title=f'{len(videos)} 曲をキューに追加しました',
+            )
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+            await ctx.send(embed=embed)
 
     @commands.command(aliases=['s'])
     async def skip(self, ctx: commands.Context):
@@ -230,7 +242,7 @@ class Voice(commands.Cog):
         if status is None:
             return await ctx.send('ボイスチャンネルにまだ未参加です')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         await status.leave()
         del self.audio_statuses[ctx.guild.id]
 
@@ -242,19 +254,29 @@ class Voice(commands.Cog):
         queue = status.get_list()
         songs = ''
         for i, video in enumerate(queue):
-            songs += f'{i + 1}. {video["title"]}\n'
+            songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {discord.utils.escape_markdown(video["user"].name)}#{status.playing["user"].discriminator}\n'
             if i >= 19:
                 songs += '...'
                 break
+        embed = discord.Embed(
+            title=f'再生中: {discord.utils.escape_markdown(status.playing["title"])} Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
+            url=status.playing["url"],
+            description=songs,
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        embed.set_footer(
+            text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
+        )
+        await ctx.send(embed=embed)
         await ctx.send(songs)
 
     @commands.command()
     async def shuffle(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         status.queue.shuffle()
         return await ctx.send('シャッフルしました')
 
@@ -262,9 +284,9 @@ class Voice(commands.Cog):
     async def remove(self, ctx: commands.Context, *, idx: int):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         title = status.queue[idx - 1][0].title
         status.queue.remove(idx - 1)
         return await ctx.send(f'{title}を削除しました')
@@ -273,30 +295,45 @@ class Voice(commands.Cog):
     async def loop(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if status.loop:
             status.loop = False
-            return await ctx.send('loopを無効にしました')
+            return await ctx.send('Loop を無効にしました')
         else:
             status.loop = True
-            return await ctx.send('loopを有効にしました')
+            return await ctx.send('Loop を有効にしました')
 
-    @commands.command(aliases=['lq'])
-    async def loopqueue(self, ctx: commands.Context):
+    @commands.command(aliases=['loopqueue', 'lq', 'queueloop'])
+    async def qloop(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
-        if status.loopqueue:
-            status.loopqueue = False
-            return await ctx.send('loopqueueを無効にしました')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
+        if status.qloop:
+            status.qloop = False
+            return await ctx.send('Queue Loop を無効にしました')
         else:
-            status.loopqueue = True
-            return await ctx.send('loopqueueを有効にしました')
+            status.qloop = True
+            return await ctx.send('Queue Loop を有効にしました')
 
+    @commands.command(aliases=['np'])
+    async def nowplaying(self, ctx: commands.Context):
+        status = self.audio_statuses.get(ctx.guild.id)
+        if status is None:
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
+        if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
+        embed = discord.Embed(
+            title=discord.utils.escape_markdown(status.playing["title"]),
+            url=status.playing["url"],
+            description=f'Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        embed.set_thumbnail(url=status.playing["thumbnail"])
+        await ctx.send(embed=embed)
 
 def setup(bot):
     return bot.add_cog(Voice(bot))
