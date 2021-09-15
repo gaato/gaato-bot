@@ -286,7 +286,7 @@ class Voice(commands.Cog):
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
-        title = status.queue[idx - 1][0].title
+        title = status.queue[idx - 1]['title']
         status.queue.remove(idx - 1)
         return await ctx.send(f'{title}を削除しました')
 
