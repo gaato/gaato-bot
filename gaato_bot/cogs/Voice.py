@@ -259,7 +259,7 @@ class Voice(commands.Cog):
                 songs += '...'
                 break
         embed = discord.Embed(
-            title=f'再生中: {discord.utils.escape_markdown(status.playing["title"])} Requested by {discord.utils.escape_markdown(status.playing["user"])}#{status.playing["user"].discriminator}',
+            title=f'再生中: {discord.utils.escape_markdown(status.playing["title"])} Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
             url=status.playing["url"],
             description=songs,
         )
