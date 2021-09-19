@@ -121,7 +121,7 @@ class AudioStatus:
             while True:
                 self.done.clear()
                 player = await YTDLSource.from_url(video['url'], loop=client.loop)
-                self.vc.play(player, after=self.play_next)
+                self.vc.play(discord.PCMVolumeTransformer(player, volume=0.25), after=self.play_next)
                 await self.ctx.send(f'{video["title"]}を再生します...')
                 self.playing = video
                 await self.done.wait()
@@ -228,9 +228,9 @@ class Voice(commands.Cog):
     async def skip(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('Botはまだボイスチャンネルに参加していません')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
-            return await ctx.send('Botと同じボイスチャンネルに入ってください')
+            return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if not status.is_playing:
             return await ctx.send('既に停止しています')
         await status.skip()
@@ -240,7 +240,7 @@ class Voice(commands.Cog):
     async def disconnect(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None:
-            return await ctx.send('ボイスチャンネルにまだ未参加です')
+            return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         await status.leave()
