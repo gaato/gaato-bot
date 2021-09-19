@@ -121,7 +121,7 @@ class AudioStatus:
             while True:
                 self.done.clear()
                 player = await YTDLSource.from_url(video['url'], loop=client.loop)
-                self.vc.play(discord.PCMVolumeTransformer(player, volume=0.2), after=self.play_next)
+                self.vc.play(discord.PCMVolumeTransformer(player, volume=0.1), after=self.play_next)
                 await self.ctx.send(f'{video["title"]}を再生します...')
                 self.playing = video
                 await self.done.wait()
