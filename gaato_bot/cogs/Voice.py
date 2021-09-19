@@ -149,7 +149,6 @@ class AudioStatus:
             for p in glob.glob('youtube-*'):
                 if os.path.isfile(p):
                     os.remove(p)
-        self = None
 
     @property
     def is_playing(self):
