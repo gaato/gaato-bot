@@ -251,9 +251,10 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if not status.is_playing:
             return await ctx.send('既に停止しています')
+        title = status.playing['title']
         await status.skip()
         embed = discord.Embed(
-            title='スキップしました',
+            title=f'{title} をスキップしました',
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
