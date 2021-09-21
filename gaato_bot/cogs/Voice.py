@@ -24,9 +24,16 @@ def get_videos_search(keyword):
 
 def get_videos_from_playlist(playlist_id):
     youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-    yotube_query = youtube.playlistItems().list(playlistId=playlist_id, part='snippet,contentDetails', maxResults=50)
-    youtube_res = yotube_query.execute()
-    return youtube_res.get('items', [])
+    youtube_query = youtube.playlistItems().list(playlistId=playlist_id, part='snippet,contentDetails', maxResults=50)
+    result = []
+    while youtube_query:
+        youtube_res = youtube_query.execute()
+        result += youtube_res.get('items', [])
+        youtube_query = youtube.playlistItems().list_next(
+            youtube_query,
+            youtube_res,
+        )
+    return result
 
 # Suppress noise about console usage from errors
 youtube_dl.utils.bug_reports_message = lambda: ''
@@ -77,7 +84,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 
 class AudioQueue(asyncio.Queue):
     def __init__(self):
-        super().__init__(100)
+        super().__init__()
 
     def __getitem__(self, idx):
         return self._queue[idx]
@@ -200,12 +207,15 @@ class Voice(commands.Cog):
             result = get_videos_from_playlist(playlist_id)
             videos = []
             for r in result:
-                videos.append({
-                    'title': r['snippet']['title'],
-                    'url': 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'],
-                    'thumbnail': r['snippet']['thumbnails']['default']['url'],
-                    'user': ctx.author,
-                })
+                try:
+                    videos.append({
+                        'title': r['snippet']['title'],
+                        'url': 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'],
+                        'thumbnail': r['snippet']['thumbnails']['default']['url'],
+                        'user': ctx.author,
+                    })
+                except KeyError:
+                    pass
         else:
             result = get_videos_search(url_or_keyword)
             videos = [{
