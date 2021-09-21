@@ -175,7 +175,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['p'])
     async def play(self, ctx: commands.Context, *, url_or_keyword: str):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected or not status.vc.is_connected:
             await ctx.invoke(self.join)
             status = self.audio_statuses[ctx.guild.id]
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
@@ -227,7 +227,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['s'])
     async def skip(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -239,7 +239,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['dc'])
     async def disconnect(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -249,7 +249,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['q'])
     async def queue(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
         songs = ''
@@ -272,7 +272,7 @@ class Voice(commands.Cog):
     @commands.command()
     async def shuffle(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -282,7 +282,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['rm'])
     async def remove(self, ctx: commands.Context, *, idx: int):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -293,7 +293,7 @@ class Voice(commands.Cog):
     @commands.command()
     async def loop(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -307,7 +307,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['loopqueue', 'lq', 'queueloop'])
     async def qloop(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -321,7 +321,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
@@ -337,7 +337,7 @@ class Voice(commands.Cog):
     @commands.command(aliases=['cl'])
     async def clear(self, ctx: commands.Context):
         status = self.audio_statuses.get(ctx.guild.id)
-        if status is None:
+        if status is None or not status.vc.is_connected:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
