@@ -120,11 +120,15 @@ class AudioStatus:
                 asyncio.create_task(self.leave())
             while True:
                 self.done.clear()
-                player = await YTDLSource.from_url(video['url'], loop=client.loop)
-                self.vc.play(discord.PCMVolumeTransformer(player, volume=0.1), after=self.play_next)
-                await self.ctx.send(f'{video["title"]}を再生します...')
-                self.playing = video
-                await self.done.wait()
+                try:
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
+                except youtube_dl.utils.DownloadError:
+                    self.ctx.send(f'{video["title"]} を再生できませんでした')
+                else:
+                    self.vc.play(discord.PCMVolumeTransformer(player, volume=0.1), after=self.play_next)
+                    await self.ctx.send(f'{video["title"]} を再生します...')
+                    self.playing = video
+                    await self.done.wait()
                 if self.loop:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 elif self.qloop:
