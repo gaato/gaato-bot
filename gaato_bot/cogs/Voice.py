@@ -120,6 +120,9 @@ class AudioStatus:
                 asyncio.create_task(self.leave())
             while True:
                 self.done.clear()
+                for p in glob.glob('youtube-*'):
+                    if os.path.isfile(p):
+                        os.remove(p)
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 except youtube_dl.utils.DownloadError:
