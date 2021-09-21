@@ -139,6 +139,7 @@ class AudioStatus:
                     await self.ctx.send(f'{video["title"]} を再生します...')
                     self.playing = video
                     await self.done.wait()
+                    self.playing = None
                 if self.loop:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 elif self.qloop:
@@ -251,7 +252,11 @@ class Voice(commands.Cog):
         if not status.is_playing:
             return await ctx.send('既に停止しています')
         await status.skip()
-        await ctx.send('スキップしました')
+        embed = discord.Embed(
+            title='スキップしました',
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command(aliases=['dc'])
     async def disconnect(self, ctx: commands.Context):
@@ -262,6 +267,11 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         await status.leave()
         del self.audio_statuses[ctx.guild.id]
+        embed = discord.Embed(
+            title='切断しました',
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command(aliases=['q'])
     async def queue(self, ctx: commands.Context):
@@ -305,7 +315,11 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         title = status.queue[idx - 1]['title']
         status.queue.remove(idx - 1)
-        return await ctx.send(f'{title}を削除しました')
+        embed = discord.Embed(
+            title=f'{title} を削除しました',
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command()
     async def loop(self, ctx: commands.Context):
@@ -342,11 +356,16 @@ class Voice(commands.Cog):
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
-        embed = discord.Embed(
-            title=discord.utils.escape_markdown(status.playing["title"]),
-            url=status.playing["url"],
-            description=f'Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
-        )
+        if status.playing:
+            embed = discord.Embed(
+                title=discord.utils.escape_markdown(status.playing["title"]),
+                url=status.playing["url"],
+                description=f'Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
+            )
+        else:
+            embed = discord.Embed(
+                title='何も再生されていません',
+            )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         embed.set_thumbnail(url=status.playing["thumbnail"])
         await ctx.send(embed=embed)
@@ -359,7 +378,11 @@ class Voice(commands.Cog):
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         status.queue.reset()
-        return await ctx.send('キューを削除しました')
+        embed = discord.Embed(
+            title='キューを削除しました',
+        )
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
 
 def setup(bot):
     return bot.add_cog(Voice(bot))
