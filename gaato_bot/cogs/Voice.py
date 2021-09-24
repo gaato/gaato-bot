@@ -135,7 +135,7 @@ class AudioStatus:
                 except youtube_dl.utils.DownloadError:
                     self.ctx.send(f'{video["title"]} を再生できませんでした')
                 else:
-                    self.vc.play(discord.PCMVolumeTransformer(player, volume=0.02), after=self.play_next)
+                    self.vc.play(discord.PCMVolumeTransformer(player, volume=0.05), after=self.play_next)
                     await self.ctx.send(f'{video["title"]} を再生します...')
                     self.playing = video
                     await self.done.wait()
