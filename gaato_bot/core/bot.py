@@ -10,7 +10,7 @@ class GaatoBot(commands.Bot):
         self.load_cogs()
 
     def load_cogs(self):
-        cogs = ['gaato_bot.cogs.Voice', 'gaato_bot.cogs.Tex']
+        cogs = ['gaato_bot.cogs.Voice']
         for cog in cogs:
             self.load_extension(cog)
             print(cog + 'をロードしました')
