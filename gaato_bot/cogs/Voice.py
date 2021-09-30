@@ -195,8 +195,8 @@ class Voice(commands.Cog):
             status = self.audio_statuses[ctx.guild.id]
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
-        if re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)', url_or_keyword):
-            result = get_videos_search(url_or_keyword)
+        if m := re.match(r'https?://(((www|m)\.)?youtube\.com/watch\?v=|youtu\.be/)([^&]+)', url_or_keyword):
+            result = get_videos_search(m.groups()[-1])
             videos = [{
                 'title': result[0]['snippet']['title'],
                 'url': 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'],
