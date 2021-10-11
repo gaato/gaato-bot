@@ -108,7 +108,7 @@ class AudioStatus:
         self.ctx: commands.Context = ctx
         self.queue = AudioQueue()
         self.done = asyncio.Event()
-        self.playing = {}
+        self.playing = None
         self.loop = False
         self.qloop = False
         asyncio.create_task(self.playing_task())
@@ -252,7 +252,7 @@ class Voice(commands.Cog):
         if not status.is_playing:
             return await ctx.send('既に停止しています')
         title = status.playing['title']
-        await status.skip()
+        status.skip()
         embed = discord.Embed(
             title=f'{title} をスキップしました',
         )
@@ -281,14 +281,14 @@ class Voice(commands.Cog):
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
         songs = ''
+        if status.playing:
+            songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}'
         for i, video in enumerate(queue):
-            songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {discord.utils.escape_markdown(video["user"].name)}#{status.playing["user"].discriminator}\n'
+            songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
             if i >= 19:
                 songs += '...'
                 break
         embed = discord.Embed(
-            title=f'再生中: {discord.utils.escape_markdown(status.playing["title"])} Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
-            url=status.playing["url"],
             description=songs,
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
@@ -361,14 +361,14 @@ class Voice(commands.Cog):
             embed = discord.Embed(
                 title=discord.utils.escape_markdown(status.playing["title"]),
                 url=status.playing["url"],
-                description=f'Requested by {discord.utils.escape_markdown(status.playing["user"].name)}#{status.playing["user"].discriminator}',
+                description=f'Requested by {status.playing["user"].mention}',
             )
+            embed.set_thumbnail(url=status.playing["thumbnail"])
         else:
             embed = discord.Embed(
                 title='何も再生されていません',
             )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-        embed.set_thumbnail(url=status.playing["thumbnail"])
         await ctx.send(embed=embed)
 
     @commands.command(aliases=['cl'])
