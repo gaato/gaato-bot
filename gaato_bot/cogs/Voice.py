@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 from gaato_bot.core.bot import GaatoBot
 from googleapiclient.discovery import build
 
-
 load_dotenv(verbose=True)
 GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
 
@@ -125,18 +124,21 @@ class AudioStatus:
                 video = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
-            while True:
+            while video['user'].voice and video['user'].voice.channel.id == self.vc.channel.id:
                 self.done.clear()
                 for p in glob.glob('youtube-*'):
                     if os.path.isfile(p):
                         os.remove(p)
+                self.playing = video
+                self.playing['title'] += '（ダウンロード中）'
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 except youtube_dl.utils.DownloadError:
                     self.ctx.send(f'{video["title"]} を再生できませんでした')
+                    self.playing = None
                 else:
                     self.vc.play(discord.PCMVolumeTransformer(player, volume=0.05), after=self.play_next)
-                    await self.ctx.send(f'{video["title"]} を再生します...')
+                    # await self.ctx.send(f'{video["title"]} を再生します...')
                     self.playing = video
                     await self.done.wait()
                     self.playing = None
