@@ -1,4 +1,5 @@
 import asyncio
+import copy
 import glob
 import os
 import random
@@ -126,10 +127,7 @@ class AudioStatus:
                 asyncio.create_task(self.leave())
             while video['user'].voice and video['user'].voice.channel.id == self.vc.channel.id:
                 self.done.clear()
-                for p in glob.glob('youtube-*'):
-                    if os.path.isfile(p):
-                        os.remove(p)
-                self.playing = video
+                self.playing = copy.copy(video)
                 self.playing['title'] += '（ダウンロード中）'
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
