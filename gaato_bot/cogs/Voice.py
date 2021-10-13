@@ -282,7 +282,7 @@ class Voice(commands.Cog):
         queue = status.get_list()
         songs = ''
         if status.playing:
-            songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}'
+            songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
         for i, video in enumerate(queue):
             songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
             if i >= 19:
