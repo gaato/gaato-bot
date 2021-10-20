@@ -4,6 +4,7 @@ import glob
 import os
 import random
 import re
+import traceback
 from typing import Dict
 
 import discord
@@ -58,7 +59,8 @@ ffmpeg_options = {
 
 ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
 
-client = discord.Client()
+intents = discord.Intents.all()
+client = discord.Client(intents=intents)
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -131,7 +133,10 @@ class AudioStatus:
                 self.playing['title'] += '（ダウンロード中）'
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
-                except youtube_dl.utils.DownloadError:
+                except youtube_dl.utils.DownloadError as e:
+                    traceback.print_exc()
+                    if log_channel := client.get_channel(646001242870382629):
+                        await log_channel.send(str(e))
                     await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 else:
@@ -140,7 +145,9 @@ class AudioStatus:
                         self.playing = video
                         await self.done.wait()
                     except Exception as e:
-                        print(e)
+                        traceback.print_exc()
+                        if log_channel := client.get_channel(646001242870382629):
+                            await log_channel.send(str(e))
                         await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:

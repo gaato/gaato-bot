@@ -6,7 +6,8 @@ import traceback
 class GaatoBot(commands.Bot):
     def __init__(self, token):
         self.token = token
-        super().__init__(command_prefix=')')
+        intents = discord.Intents.all()
+        super().__init__(command_prefix=')', intents=intents)
         self.load_cogs()
 
     def load_cogs(self):
