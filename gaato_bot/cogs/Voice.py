@@ -130,7 +130,7 @@ class AudioStatus:
                 self.playing = copy.copy(video)
                 self.playing['title'] += '（ダウンロード中）'
                 try:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
                 except youtube_dl.utils.DownloadError:
                     self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
@@ -144,7 +144,7 @@ class AudioStatus:
                         self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
                 elif self.qloop:
                     await self.add_audio(video)
                     break
