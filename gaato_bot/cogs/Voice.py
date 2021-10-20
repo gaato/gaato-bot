@@ -132,7 +132,7 @@ class AudioStatus:
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
                 except youtube_dl.utils.DownloadError:
-                    self.ctx.send(f'{video["title"]} を再生できませんでした')
+                    await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 else:
                     try:
@@ -140,8 +140,9 @@ class AudioStatus:
                         self.playing = video
                         await self.done.wait()
                     except Exception as e:
-                        print(e)
-                        self.ctx.send(f'{video["title"]} を再生できませんでした')
+                        channel = client.get_channel(646001242870382629)
+                        await channel.send(str(e))
+                        await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
