@@ -140,8 +140,7 @@ class AudioStatus:
                         self.playing = video
                         await self.done.wait()
                     except Exception as e:
-                        channel = client.get_channel(646001242870382629)
-                        await channel.send(str(e))
+                        print(e)
                         await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:
