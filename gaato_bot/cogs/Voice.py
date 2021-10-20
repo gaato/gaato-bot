@@ -132,7 +132,7 @@ class AudioStatus:
                 self.playing['title'] += '（ダウンロード中）'
                 try:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=True)
-                except youtube_dl.utils.DownloadError as e:
+                except Exception as e:
                     traceback.print_exc()
                     if log_channel := await client.fetch_channel(646001242870382629):
                         await log_channel.send(str(e))
