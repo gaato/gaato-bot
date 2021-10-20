@@ -135,10 +135,13 @@ class AudioStatus:
                     self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 else:
-                    self.vc.play(discord.PCMVolumeTransformer(player, volume=0.05), after=self.play_next)
-                    # await self.ctx.send(f'{video["title"]} を再生します...')
-                    self.playing = video
-                    await self.done.wait()
+                    try:
+                        self.vc.play(discord.PCMVolumeTransformer(player, volume=0.05), after=self.play_next)
+                        self.playing = video
+                        await self.done.wait()
+                    except Exception as e:
+                        print(e)
+                        self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:
                     player = await YTDLSource.from_url(video['url'], loop=client.loop)
