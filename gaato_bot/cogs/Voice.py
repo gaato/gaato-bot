@@ -234,7 +234,7 @@ class Voice(commands.Cog):
             await status.add_audio(video)
         if len(videos) == 1:
             embed = discord.Embed(
-                title=f'{escape(videos[0]["title"])} をキューに追加しました',
+                title=f'{discord.utils.escape_markdown(videos[0]["title"])} をキューに追加しました',
                 url=videos[0]["url"],
             )
             embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
@@ -259,7 +259,7 @@ class Voice(commands.Cog):
         title = status.playing['title']
         status.skip()
         embed = discord.Embed(
-            title=f'{escape(title)} をスキップしました',
+            title=f'{discord.utils.escape_markdown(title)} をスキップしました',
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
@@ -287,9 +287,9 @@ class Voice(commands.Cog):
         queue = status.get_list()
         songs = ''
         if status.playing:
-            songs += f'再生中: [{escape(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
+            songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
         for i, video in enumerate(queue):
-            songs += f'{i + 1}. [{escape(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
+            songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
             if i >= 19:
                 songs += '...'
                 break
@@ -322,7 +322,7 @@ class Voice(commands.Cog):
         title = status.queue[idx - 1]['title']
         status.queue.remove(idx - 1)
         embed = discord.Embed(
-            title=f'{escape(title)} を削除しました',
+            title=f'{discord.utils.escape_markdown(title)} を削除しました',
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
@@ -364,7 +364,7 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if status.playing:
             embed = discord.Embed(
-                title=escape(status.playing["title"]),
+                title=discord.utils.escape_markdown(status.playing["title"]),
                 url=status.playing["url"],
                 description=f'Requested by {status.playing["user"].mention}',
             )
@@ -389,9 +389,6 @@ class Voice(commands.Cog):
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
-
-def escape(text):
-    return escape(discord.utils.escape_mentions(text))
 
 def setup(bot):
     return bot.add_cog(Voice(bot))
