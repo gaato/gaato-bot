@@ -112,6 +112,7 @@ class AudioStatus:
         self.playing = None
         self.loop = False
         self.qloop = False
+        self.skipping = False
         asyncio.create_task(self.playing_task())
 
     async def add_audio(self, video):
@@ -126,7 +127,8 @@ class AudioStatus:
                 video = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
-            while video['user'].voice and video['user'].voice.channel.id == self.vc.channel.id:
+                break
+            while self.vc and video['user'].voice and video['user'].voice.channel.id == self.vc.channel.id:
                 self.done.clear()
                 self.playing = copy.copy(video)
                 self.playing['title'] += '（ダウンロード中）'
@@ -161,22 +163,14 @@ class AudioStatus:
         if self.vc:
             await self.vc.disconnect()
             self.vc = None
-        flag = True
-        for g in client.guilds:
-            if g.voice_client is not None:
-                flag = False
-        if flag:
-            for p in glob.glob('youtube-*'):
-                if os.path.isfile(p):
-                    os.remove(p)
 
     @property
     def is_playing(self):
         return self.vc.is_playing()
 
     def skip(self):
+        self.skipping = True
         self.vc.stop()
-        self.play_next()
 
 
 class Voice(commands.Cog):
