@@ -1,10 +1,8 @@
 import asyncio
 import copy
-import glob
 import os
 import random
 import re
-import traceback
 from typing import Dict
 
 import discord
