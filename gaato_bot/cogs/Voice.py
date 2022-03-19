@@ -68,7 +68,7 @@ def get_videos_from_playlist(playlist_id):
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
-    def __init__(self, source, *, data, volume=0.05):
+    def __init__(self, source, *, data, volume=0.02):
         super().__init__(source, volume)
 
         self.data = data
