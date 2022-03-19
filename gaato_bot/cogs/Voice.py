@@ -7,10 +7,11 @@ from typing import Dict
 
 import discord
 import yt_dlp
-from discord.ext import commands
+from discord.ext import commands, pages
 from dotenv import load_dotenv
-from gaato_bot.core.bot import GaatoBot
 from googleapiclient.discovery import build
+
+from gaato_bot.core.bot import GaatoBot
 
 
 load_dotenv(verbose=True)
@@ -294,22 +295,26 @@ class Voice(commands.Cog):
         if status is None or status.vc is None:
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
-        songs = ''
-        if status.playing:
-            songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
-        for i, video in enumerate(queue):
-            songs += f'{i + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
-            if i >= 19:
-                songs += '...'
-                break
-        embed = discord.Embed(
-            description=songs,
-        )
-        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-        embed.set_footer(
-            text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
-        )
-        await ctx.send(embed=embed)
+        page_list = []
+        for i in range((len(queue) - 1) // 10 + 1):
+            songs = ''
+            if status.playing:
+                songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
+            for j in range(i * 10, (i + 1) * 10):
+                if j >= len(queue):
+                    break
+                video = queue[j]
+                songs += f'{j + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
+            embed = discord.Embed(
+                description=songs,
+            )
+            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+            embed.set_footer(
+                text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
+            )
+            page_list.append(embed)
+        paginator = pages.Paginator(pages=page_list)
+        await paginator.send(ctx)
 
     @commands.command()
     async def shuffle(self, ctx: commands.Context):
