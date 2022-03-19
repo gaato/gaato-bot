@@ -245,7 +245,8 @@ class Voice(commands.Cog):
                 url=videos[0]["url"],
             )
             embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-            embed.set_thumbnail(url=videos[0]['thumbnail'])
+            if videos[0]['thumbnail']:
+                embed.set_thumbnail(url=videos[0]['thumbnail'])
             await ctx.send(embed=embed)
         else:
             embed = discord.Embed(
@@ -387,7 +388,8 @@ class Voice(commands.Cog):
                 url=status.playing["url"],
                 description=f'Requested by {status.playing["user"].mention}',
             )
-            embed.set_thumbnail(url=status.playing["thumbnail"])
+            if status.playing["thumbnail"]:
+                embed.set_thumbnail(url=status.playing["thumbnail"])
         else:
             embed = discord.Embed(
                 title='何も再生されていません',
