@@ -185,6 +185,7 @@ class Voice(commands.Cog):
 
     @commands.command()
     async def join(self, ctx: commands.Context):
+        """VC に参加"""
         if not ctx.author.voice or not ctx.author.voice.channel:
             return await ctx.send('先にボイスチャンネルに参加してください')
         vc = await ctx.author.voice.channel.connect()
@@ -192,6 +193,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['p'])
     async def play(self, ctx: commands.Context, *, url_or_keyword: str):
+        """音楽を再生"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None or not status.vc.is_connected:
             await ctx.invoke(self.join)
@@ -253,6 +255,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['s'])
     async def skip(self, ctx: commands.Context):
+        """流れている音楽をスキップ"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -270,6 +273,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['dc'])
     async def disconnect(self, ctx: commands.Context):
+        """VC から切断"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -285,6 +289,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['q'])
     async def queue(self, ctx: commands.Context):
+        """キューを表示"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('先にボイスチャンネルに参加してください')
@@ -308,6 +313,7 @@ class Voice(commands.Cog):
 
     @commands.command()
     async def shuffle(self, ctx: commands.Context):
+        """キューをシャッフル"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -318,6 +324,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['rm'])
     async def remove(self, ctx: commands.Context, *, idx: int):
+        """指定した番号の音楽をキューから削除"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -333,6 +340,7 @@ class Voice(commands.Cog):
 
     @commands.command()
     async def loop(self, ctx: commands.Context):
+        """１曲リピート"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -347,6 +355,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['loopqueue', 'lq', 'queueloop'])
     async def qloop(self, ctx: commands.Context):
+        """キューループ"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -361,6 +370,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['np'])
     async def nowplaying(self, ctx: commands.Context):
+        """今流れている音楽を表示"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
@@ -382,6 +392,7 @@ class Voice(commands.Cog):
 
     @commands.command(aliases=['cl'])
     async def clear(self, ctx: commands.Context):
+        """キューを削除"""
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None:
             return await ctx.send('Bot はまだボイスチャンネルに参加していません')
