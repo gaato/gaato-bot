@@ -11,13 +11,18 @@ class GaatoBot(commands.Bot):
         self.load_cogs()
 
     def load_cogs(self):
-        cogs = ['gaato_bot.cogs.Voice']
+        cogs = ['gaato_bot.cogs.Voice', 'gaato_bot.cogs.TeX']
         for cog in cogs:
             self.load_extension(cog)
             print(cog + 'をロードしました')
 
     async def on_ready(self):
         print('起動しました')
+    
+    async def on_message_edit(self, before, after):
+        if before.content == after.content:
+            return
+        await self.on_message(after)
 
     # 起動用の補助関数です
     def run(self):
@@ -27,6 +32,6 @@ class GaatoBot(commands.Bot):
             print('Discord Tokenが不正です')
         except KeyboardInterrupt:
             print('終了します')
-            self.loop.run_until_complete(self.logout())
+            self.loop.run_until_complete(self.close())
         except:
             traceback.print_exc()
