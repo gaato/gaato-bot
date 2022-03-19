@@ -20,6 +20,8 @@ class GaatoBot(commands.Bot):
         print('起動しました')
     
     async def on_message_edit(self, before, after):
+        if before.content == after.content:
+            return
         await self.on_message(after)
 
     # 起動用の補助関数です
