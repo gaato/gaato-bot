@@ -293,26 +293,43 @@ class Voice(commands.Cog):
         if status is None or status.vc is None:
             return await ctx.send('先にボイスチャンネルに参加してください')
         queue = status.get_list()
-        page_list = []
-        for i in range((len(queue) - 1) // 10 + 1):
-            songs = ''
+        if len(queue) == 0:
             if status.playing:
-                songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
-            for j in range(i * 10, (i + 1) * 10):
-                if j >= len(queue):
-                    break
-                video = queue[j]
-                songs += f'{j + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
-            embed = discord.Embed(
-                description=songs,
-            )
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-            embed.set_footer(
-                text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
-            )
-            page_list.append(embed)
-        paginator = pages.Paginator(pages=page_list)
-        await paginator.send(ctx)
+                embed = discord.Embed(
+                    description=f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n',
+                )
+                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                embed.set_footer(
+                    text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
+                )
+                await ctx.send(embed=embed)
+            else:
+                embed = discord.Embed(
+                    title='何も再生されていません',
+                )
+                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                await ctx.send(embed=embed)
+        else:
+            page_list = []
+            for i in range((len(queue) - 1) // 10 + 1):
+                songs = ''
+                if status.playing:
+                    songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
+                for j in range(i * 10, (i + 1) * 10):
+                    if j >= len(queue):
+                        break
+                    video = queue[j]
+                    songs += f'{j + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
+                embed = discord.Embed(
+                    description=songs,
+                )
+                embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+                embed.set_footer(
+                    text=f'{len(queue)} 曲, Loop: {"✅" if status.loop else "❌"}, Queue Loop: {"✅" if status.qloop else "❌"}',
+                )
+                page_list.append(embed)
+            paginator = pages.Paginator(pages=page_list)
+            await paginator.send(ctx)
 
     @commands.command()
     async def shuffle(self, ctx: commands.Context):
@@ -408,6 +425,7 @@ class Voice(commands.Cog):
         )
         embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
         await ctx.send(embed=embed)
+
 
 def setup(bot):
     return bot.add_cog(Voice(bot))
