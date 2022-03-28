@@ -139,7 +139,7 @@ class AudioStatus:
                 self.playing = copy.copy(video)
                 self.playing['title'] += '（ダウンロード中）'
                 try:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=video['stream'])
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 except Exception as e:
                     print(e)
                     await self.ctx.send(f'{video["title"]} を再生できませんでした')
@@ -154,7 +154,7 @@ class AudioStatus:
                         await self.ctx.send(f'{video["title"]} を再生できませんでした')
                     self.playing = None
                 if self.loop:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop, stream=video['stream'])
+                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
                 elif self.qloop:
                     await self.add_audio(video)
                     break
@@ -212,7 +212,6 @@ class Voice(commands.Cog):
                         'url': 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'],
                         'thumbnail': r['snippet']['thumbnails']['default']['url'],
                         'user': ctx.author,
-                        'stream': True,
                     })
                 except KeyError:
                     pass
@@ -226,7 +225,6 @@ class Voice(commands.Cog):
                 'url': url_or_keyword,
                 'thumbnail': result.get('thumbnail'),
                 'user': ctx.author,
-                'stream': not re.match(r'https?://(((www|m)\.)?nicovideo\.jp|nico\.ms)', url_or_keyword),
             }]
         else:
             result = get_videos_search(url_or_keyword)
@@ -235,7 +233,6 @@ class Voice(commands.Cog):
                 'url': 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'],
                 'thumbnail': result[0]['snippet']['thumbnails']['default']['url'],
                 'user': ctx.author,
-                'stream': True,
             }]
         for video in videos:
             await status.add_audio(video)
