@@ -1,0 +1,6 @@
+py-cord[voice]==2.0.0b5
+aiohttp
+python-dotenv
+yt-dlp>=2022.3.8.2
+google-auth-oauthlib
+google-api-python-client
