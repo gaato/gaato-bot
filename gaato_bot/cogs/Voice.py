@@ -51,7 +51,7 @@ class Song:
     @classmethod
     def from_url(cls, url, user):
         meta = ytdl.extract_info(url, download=False)
-        return cls(meta.get('title'), url, meta.get('tumbnail'), user)
+        return cls(meta.get('title'), url, meta.get('thumbnail'), user)
     
     @classmethod
     def from_youtube_search(cls, keyword, user):
