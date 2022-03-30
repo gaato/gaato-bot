@@ -2,7 +2,11 @@
 
 **This repository is for Japanese.**
 
-## 動かし方
+## What is this
+
+音楽を再生したり TeX を画像化したりする Discord の bot です。
+
+## How to run
 
 .env に `DISCORD_TOKEN` と `GOOGLE_API_KEY` を設定する。
 
@@ -13,3 +17,9 @@ $ pip install pip-tools
 $ pip-sync
 $ python -m gaato_bot
 ```
+
+## For developer
+
+プルリクエストは歓迎します。
+パッケージの管理は [pip-tools](https://github.com/jazzband/pip-tools) を使ってください。
+requirements.txt を手で書き換えることはしないでください。
