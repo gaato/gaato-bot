@@ -4,6 +4,7 @@ import os
 import random
 import re
 from typing import Dict
+from unittest import result
 
 import discord
 import yt_dlp
@@ -43,28 +44,48 @@ ytdl = yt_dlp.YoutubeDL(ytdl_format_options)
 client = discord.Client()
 
 
-def get_video_from_url(url):
-    meta = ytdl.extract_info(url, download=False)
-    return meta
+class Song:
+    def __init__(self, title, url, thumbnail, user):
+        self.title = title
+        self.url = url
+        self.thumbnail = thumbnail
+        self.user = user
 
-def get_videos_search(keyword):
-    youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-    youtube_query = youtube.search().list(q=keyword, part='id,snippet', maxResults=1)
-    youtube_res = youtube_query.execute()
-    return youtube_res.get('items', [])
-
-def get_videos_from_playlist(playlist_id):
-    youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-    youtube_query = youtube.playlistItems().list(playlistId=playlist_id, part='snippet,contentDetails', maxResults=50)
-    result = []
-    while youtube_query:
+    @classmethod
+    def from_url(cls, url, user):
+        meta = ytdl.extract_info(url, download=False)
+        return cls(meta.get('title'), url, meta.get('tumbnail'), user)
+    
+    @classmethod
+    def from_youtube_search(cls, keyword, user):
+        youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
+        youtube_query = youtube.search().list(q=keyword, part='id,snippet', maxResults=1)
         youtube_res = youtube_query.execute()
-        result += youtube_res.get('items', [])
-        youtube_query = youtube.playlistItems().list_next(
-            youtube_query,
-            youtube_res,
-        )
-    return result
+        title = youtube_res['items'][0]['snippet']['title']
+        url = 'https://www.youtube.com/watch?v=' + youtube_res['items'][0]['id']['videoId']
+        thumbnail = youtube_res['items'][0]['snippet']['thumbnails']['default']['url']
+        return cls(title, url, thumbnail, user)
+
+    @classmethod
+    def list_from_youtube_playlist(cls, playlist_id, user):
+        youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
+        youtube_query = youtube.playlistItems().list(playlistId=playlist_id, part='snippet,contentDetails', maxResults=50)
+        result = []
+        while youtube_query:
+            youtube_res = youtube_query.execute()
+            for r in youtube_res.get('items', []):
+                try:
+                    title = r['snippet']['title']
+                    url = 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId']
+                    thumbnail = r['snippet']['thumbnails']['default']['url']
+                except KeyError:
+                    continue
+                result.append(cls(title, url, thumbnail, user))
+            youtube_query = youtube.playlistItems().list_next(
+                youtube_query,
+                youtube_res,
+            )
+        return result
 
 
 class YTDLSource(discord.PCMVolumeTransformer):
@@ -121,8 +142,8 @@ class AudioStatus:
         self.skipping = False
         asyncio.create_task(self.playing_task())
 
-    async def add_audio(self, video):
-        await self.queue.put(video)
+    async def add_audio(self, song):
+        await self.queue.put(song)
 
     def get_list(self):
         return self.queue.to_list()
@@ -130,33 +151,33 @@ class AudioStatus:
     async def playing_task(self):
         while True:
             try:
-                video = await asyncio.wait_for(self.queue.get(), timeout=180)
+                song = await asyncio.wait_for(self.queue.get(), timeout=180)
             except asyncio.TimeoutError:
                 asyncio.create_task(self.leave())
                 break
-            while self.vc and video['user'].voice and video['user'].voice.channel.id == self.vc.channel.id:
+            while self.vc and song.user.voice and song.user.voice.channel.id == self.vc.channel.id:
                 self.done.clear()
-                self.playing = copy.copy(video)
-                self.playing['title'] += '（ダウンロード中）'
+                self.playing = copy.copy(song)
+                self.playing.title += '（ダウンロード中）'
                 try:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
+                    player = await YTDLSource.from_url(song.url, loop=client.loop)
                 except Exception as e:
                     print(e)
-                    await self.ctx.send(f'{video["title"]} を再生できませんでした')
+                    await self.ctx.send(f'{song.title} を再生できませんでした')
                     self.playing = None
                 else:
                     try:
                         self.vc.play(player, after=self.play_next)
-                        self.playing = video
+                        self.playing = song
                         await self.done.wait()
                     except Exception as e:
                         print(e)
-                        await self.ctx.send(f'{video["title"]} を再生できませんでした')
+                        await self.ctx.send(f'{song.title} を再生できませんでした')
                     self.playing = None
                 if self.loop:
-                    player = await YTDLSource.from_url(video['url'], loop=client.loop)
+                    player = await YTDLSource.from_url(song.url, loop=client.loop)
                 elif self.qloop:
-                    await self.add_audio(video)
+                    await self.add_audio(song)
                     break
                 else:
                     break
@@ -201,53 +222,33 @@ class Voice(commands.Cog):
             status = self.audio_statuses[ctx.guild.id]
         if ctx.author.voice is None or ctx.author.voice.channel.id != status.vc.channel.id:
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
+
         if m := re.match(r'https?://((www|m)\.)?youtube\.com/playlist\?list=', url_or_keyword):
             playlist_id = url_or_keyword.replace(m.group(), '')
-            result = get_videos_from_playlist(playlist_id)
-            videos = []
-            for r in result:
-                try:
-                    videos.append({
-                        'title': r['snippet']['title'],
-                        'url': 'https://www.youtube.com/watch?v=' + r['contentDetails']['videoId'],
-                        'thumbnail': r['snippet']['thumbnails']['default']['url'],
-                        'user': ctx.author,
-                    })
-                except KeyError:
-                    pass
+            songs = Song.list_from_youtube_playlist(playlist_id, ctx.author)
         elif re.match(r'https?://.+', url_or_keyword):
             try:
-                result = get_video_from_url(url_or_keyword)
+                songs = [Song.from_url(url_or_keyword, ctx.author)]
             except yt_dlp.utils.DownloadError:
                 return await ctx.send('サポートしていない URL です')
-            videos = [{
-                'title': result.get('title'),
-                'url': url_or_keyword,
-                'thumbnail': result.get('thumbnail'),
-                'user': ctx.author,
-            }]
         else:
-            result = get_videos_search(url_or_keyword)
-            videos = [{
-                'title': result[0]['snippet']['title'],
-                'url': 'https://www.youtube.com/watch?v=' + result[0]['id']['videoId'],
-                'thumbnail': result[0]['snippet']['thumbnails']['default']['url'],
-                'user': ctx.author,
-            }]
-        for video in videos:
-            await status.add_audio(video)
-        if len(videos) == 1:
+            songs = [Song.from_youtube_search(url_or_keyword, ctx.author)]
+
+        for song in songs:
+            await status.add_audio(song)
+
+        if len(songs) == 1:
             embed = discord.Embed(
-                title=f'{discord.utils.escape_markdown(videos[0]["title"])} をキューに追加しました',
-                url=videos[0]["url"],
+                title=f'{discord.utils.escape_markdown(songs[0].title)} をキューに追加しました',
+                url=songs[0].url,
             )
             embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-            if videos[0]['thumbnail']:
-                embed.set_thumbnail(url=videos[0]['thumbnail'])
+            if songs[0].thumbnail:
+                embed.set_thumbnail(url=songs[0].thumbnail)
             await ctx.send(embed=embed)
         else:
             embed = discord.Embed(
-                title=f'{len(videos)} 曲をキューに追加しました',
+                title=f'{len(songs)} 曲をキューに追加しました',
             )
             embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
             await ctx.send(embed=embed)
@@ -262,7 +263,7 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if not status.is_playing:
             return await ctx.send('既に停止しています')
-        title = status.playing['title']
+        title = status.playing.title
         status.skip()
         embed = discord.Embed(
             title=f'{discord.utils.escape_markdown(title)} をスキップしました',
@@ -296,7 +297,7 @@ class Voice(commands.Cog):
         if len(queue) == 0:
             if status.playing:
                 embed = discord.Embed(
-                    description=f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n',
+                    description=f'再生中: [{discord.utils.escape_markdown(status.playing.title)}]({status.playing.url}) Requested by {status.playing.user.mention}\n',
                 )
                 embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
                 embed.set_footer(
@@ -314,12 +315,12 @@ class Voice(commands.Cog):
             for i in range((len(queue) - 1) // 10 + 1):
                 songs = ''
                 if status.playing:
-                    songs += f'再生中: [{discord.utils.escape_markdown(status.playing["title"])}]({status.playing["url"]}) Requested by {status.playing["user"].mention}\n'
+                    songs += f'再生中: [{discord.utils.escape_markdown(status.playing.title)}]({status.playing.url}) Requested by {status.playing.user.mention}\n'
                 for j in range(i * 10, (i + 1) * 10):
                     if j >= len(queue):
                         break
-                    video = queue[j]
-                    songs += f'{j + 1}. [{discord.utils.escape_markdown(video["title"])}]({video["url"]}) Requested by {video["user"].mention}\n'
+                    song = queue[j]
+                    songs += f'{j + 1}. [{discord.utils.escape_markdown(song.title)}]({song.url}) Requested by {song.user.mention}\n'
                 embed = discord.Embed(
                     description=songs,
                 )
@@ -398,12 +399,12 @@ class Voice(commands.Cog):
             return await ctx.send('Bot と同じボイスチャンネルに入ってください')
         if status.playing:
             embed = discord.Embed(
-                title=discord.utils.escape_markdown(status.playing["title"]),
+                title=discord.utils.escape_markdown(status.playing.title),
                 url=status.playing["url"],
-                description=f'Requested by {status.playing["user"].mention}',
+                description=f'Requested by {status.playing.user.mention}',
             )
-            if status.playing["thumbnail"]:
-                embed.set_thumbnail(url=status.playing["thumbnail"])
+            if status.playing.thumbnail:
+                embed.set_thumbnail(url=status.playing.thumbnail)
         else:
             embed = discord.Embed(
                 title='何も再生されていません',
