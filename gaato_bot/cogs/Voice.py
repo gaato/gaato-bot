@@ -4,15 +4,12 @@ import os
 import random
 import re
 from typing import Dict
-from unittest import result
 
 import discord
 import yt_dlp
 from discord.ext import commands, pages
 from dotenv import load_dotenv
 from googleapiclient.discovery import build
-
-from gaato_bot.core.bot import GaatoBot
 
 
 load_dotenv(verbose=True)
@@ -201,7 +198,7 @@ class AudioStatus:
 
 
 class Voice(commands.Cog):
-    def __init__(self, bot: GaatoBot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.audio_statuses: Dict[int, AudioStatus] = {}
 

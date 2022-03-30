@@ -6,11 +6,9 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from ..core.bot import GaatoBot
-
 
 class TeX(commands.Cog):
-    def __init__(self, bot: GaatoBot):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     async def response(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
