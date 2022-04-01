@@ -25,6 +25,7 @@ class Code(commands.Cog):
 
     @commands.command()
     async def run(self, ctx: commands.Context, language: str, *, code: str):
+        """Run code"""
 
         view = discord.ui.View(DeleteButton(label='Delete'))
 

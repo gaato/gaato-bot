@@ -95,27 +95,27 @@ class TeX(commands.Cog):
 
     @commands.command()
     async def tex(self, ctx: commands.Context, *, code: str):
-        """TeX を画像化（数式モード内）"""
+        """TeX to image (in math mode)"""
         await self.response(ctx, code, 'png', False, False)
 
     @commands.command()
     async def texp(self, ctx: commands.Context, *, code: str):
-        """TeX を画像化（数式モード外）"""
+        """TeX to image (out of math mode)"""
         await self.response(ctx, code, 'png', True, False)
 
     @commands.command()
     async def stex(self, ctx: commands.Context, *, code: str):
-        """TeX をスポイラー画像化（数式モード内）"""
+        """TeX to spoiler image (in math mode)"""
         await self.response(ctx, code, 'png', False, True)
 
     @commands.command()
     async def stexp(self, ctx: commands.Context, *, code: str):
-        """TeX をスポイラー画像化（数式モード外）"""
+        """TeX to spoiler image (out of math mode)"""
         await self.response(ctx, code, 'png', True, True)
 
     @commands.command()
     async def texpdf(self, ctx: commands.Context, *, code: str):
-        """TeX を PDF 化（プリアンブルから）"""
+        """TeX to PDF (from preamble)"""
         await self.response(ctx, code, 'pdf', None, False)
 
 
