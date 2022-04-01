@@ -7,6 +7,12 @@ import discord
 from discord.ext import commands
 
 
+class DeleteButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == interaction.message.reference.cached_message.author.id:
+            await interaction.message.delete()
+
+
 class TeX(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -15,12 +21,7 @@ class TeX(commands.Cog):
 
         async with ctx.channel.typing():
 
-            button = discord.ui.Button(label='削除')
-            async def button_callback(interaction: discord.Interaction):
-                if interaction.user.id == interaction.message.reference.cached_message.author.id:
-                    await interaction.message.delete()
-            button.callback = button_callback
-            view = discord.ui.View(button)
+            view = discord.ui.View(DeleteButton(label='Delete'))
 
             code = code.replace('```tex', '').replace('```', '').strip()
 
