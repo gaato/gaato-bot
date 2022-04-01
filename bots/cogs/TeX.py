@@ -7,6 +7,12 @@ import discord
 from discord.ext import commands
 
 
+class DeleteButton(discord.ui.Button):
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id == interaction.message.reference.cached_message.author.id:
+            await interaction.message.delete()
+
+
 class TeX(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -15,12 +21,7 @@ class TeX(commands.Cog):
 
         async with ctx.channel.typing():
 
-            button = discord.ui.Button(label='削除')
-            async def button_callback(interaction: discord.Interaction):
-                if interaction.user.id == interaction.message.reference.cached_message.author.id:
-                    await interaction.message.delete()
-            button.callback = button_callback
-            view = discord.ui.View(button)
+            view = discord.ui.View(DeleteButton(label='Delete'))
 
             code = code.replace('```tex', '').replace('```', '').strip()
 
@@ -94,27 +95,27 @@ class TeX(commands.Cog):
 
     @commands.command()
     async def tex(self, ctx: commands.Context, *, code: str):
-        """TeX を画像化（数式モード内）"""
+        """TeX to image (in math mode)"""
         await self.response(ctx, code, 'png', False, False)
 
     @commands.command()
     async def texp(self, ctx: commands.Context, *, code: str):
-        """TeX を画像化（数式モード外）"""
+        """TeX to image (out of math mode)"""
         await self.response(ctx, code, 'png', True, False)
 
     @commands.command()
     async def stex(self, ctx: commands.Context, *, code: str):
-        """TeX をスポイラー画像化（数式モード内）"""
+        """TeX to spoiler image (in math mode)"""
         await self.response(ctx, code, 'png', False, True)
 
     @commands.command()
     async def stexp(self, ctx: commands.Context, *, code: str):
-        """TeX をスポイラー画像化（数式モード外）"""
+        """TeX to spoiler image (out of math mode)"""
         await self.response(ctx, code, 'png', True, True)
 
     @commands.command()
     async def texpdf(self, ctx: commands.Context, *, code: str):
-        """TeX を PDF 化（プリアンブルから）"""
+        """TeX to PDF (from preamble)"""
         await self.response(ctx, code, 'pdf', None, False)
 
 
