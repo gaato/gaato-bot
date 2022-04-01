@@ -15,7 +15,7 @@
 ```
 $ pip install pip-tools
 $ pip-sync
-$ python -m gaato_bot
+$ python -m bots
 ```
 
 ## For developer

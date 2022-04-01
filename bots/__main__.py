@@ -3,15 +3,15 @@ import os
 
 from dotenv import load_dotenv
 
-from gaato_bot.core.bot import Bot
+from bots.core.bot import Bot
 
 load_dotenv(verbose=True)
 
 CODERUNBOT_TOKEN = os.environ.get('CODERUNBOT_TOKEN')
 GAATO_BOT_TOKEN = os.environ.get('GAATO_BOT_TOKEN')
 
-coderunbot_cogs = ['gaato_bot.cogs.TeX', 'gaato_bot.cogs.Code']
-gaato_bot_cogs = ['gaato_bot.cogs.Voice', 'gaato_bot.cogs.TeX', 'gaato_bot.cogs.Code']
+coderunbot_cogs = ['bots.cogs.TeX', 'bots.cogs.Code']
+gaato_bot_cogs = ['bots.cogs.Voice', 'bots.cogs.TeX', 'bots.cogs.Code']
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gaato-bot',
