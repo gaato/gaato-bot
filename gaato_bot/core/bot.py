@@ -3,16 +3,15 @@ from discord.ext import commands
 import traceback
 
 
-class GaatoBot(commands.Bot):
-    def __init__(self, token):
+class Bot(commands.Bot):
+    def __init__(self, token, cogs, prefix):
         self.token = token
         intents = discord.Intents.default()
         intents.message_content = True
-        super().__init__(command_prefix=')', intents=intents)
-        self.load_cogs()
+        super().__init__(command_prefix=prefix, intents=intents)
+        self.load_cogs(cogs)
 
-    def load_cogs(self):
-        cogs = ['gaato_bot.cogs.Voice', 'gaato_bot.cogs.TeX', 'gaato_bot.cogs.Code']
+    def load_cogs(self, cogs):
         for cog in cogs:
             self.load_extension(cog)
             print(cog + 'をロードしました')
