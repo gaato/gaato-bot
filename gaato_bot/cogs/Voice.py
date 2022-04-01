@@ -397,7 +397,7 @@ class Voice(commands.Cog):
         if status.playing:
             embed = discord.Embed(
                 title=discord.utils.escape_markdown(status.playing.title),
-                url=status.playing["url"],
+                url=status.playing.url,
                 description=f'Requested by {status.playing.user.mention}',
             )
             if status.playing.thumbnail:
