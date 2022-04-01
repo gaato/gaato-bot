@@ -1,16 +1,20 @@
-# がーとぼっと
-
-**This repository is for Japanese.**
+# CodeRunBot (gaato bot)
 
 ## What is this
 
-音楽を再生したり TeX を画像化したりする Discord の bot です。
+### CodeRunBot
 
-## How to run
+It can run codes and render LaTeX.
 
-.env に `DISCORD_TOKEN` と `GOOGLE_API_KEY` を設定する。
+### gaato bot
 
-**以下の作業は venv の中でやってください！**
+This is a bot for internal use that adds music playback and other functions to CodeRunBot. Also, this is for Japanese speakers.
+
+## How to run (CodeRunBot)
+
+Set `CODERUNBOT_TOKEN` and `GOOGLE_API_KEY` in the `.env`.
+
+**Do the following in venv!**
 
 ```
 $ pip install pip-tools
@@ -18,8 +22,16 @@ $ pip-sync
 $ python -m bots
 ```
 
+## How to run (gaato bot)
+
+Basically the same as CodeRunBot, but set `.env` to `GAATO_BOT_TOKEN` and the execution command is as follows. You also need ffmpeg.
+
+```
+$ python -m bots -g
+```
+
 ## For developer
 
-プルリクエストは歓迎します。
-パッケージの管理は [pip-tools](https://github.com/jazzband/pip-tools) を使ってください。
-requirements.txt を手で書き換えることはしないでください。
+Pull requests are welcome.
+Please use [pip-tools](https://github.com/jazzband/pip-tools) to manage packages.
+Do not rewrite requirements.txt by hand.
