@@ -10,6 +10,10 @@ It can run codes and render LaTeX.
 
 This is a bot for internal use that adds music playback and other functions to CodeRunBot. Also, this is for Japanese speakers.
 
+## Privacy Policy
+
+[here](bots/config/privacy-policy.md)
+
 ## How to run (CodeRunBot)
 
 Set `CODERUNBOT_TOKEN` and `GOOGLE_API_KEY` in the `.env`.
