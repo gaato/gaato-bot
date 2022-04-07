@@ -14,8 +14,15 @@ BADE_DIR = pathlib.Path(__file__).parent.parent
 
 
 class DeleteButton(discord.ui.Button):
+    def __init__(self, bot: commands.Bot, *args, **kwargs):
+        self.bot = bot
+        super().__init__(*args, **kwargs)
+
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id == interaction.message.reference.cached_message.author.id:
+        if (message := interaction.message.reference.cached_message) is None:
+            channel = await self.bot.fetch_channel(interaction.message.reference.channel_id)
+            message = await channel.fetch_message(interaction.message.reference.message_id)
+        if interaction.user.id == message.author.id:
             await interaction.message.delete()
 
 
@@ -27,7 +34,7 @@ class Code(commands.Cog):
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
 
-        view = discord.ui.View(DeleteButton(label='Delete'))
+        view = discord.ui.View(DeleteButton(self.bot, label='Delete'))
 
         with open(BADE_DIR / 'config' / 'languages.json', 'r') as f:
             language_dict = json.load(f)

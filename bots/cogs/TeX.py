@@ -8,8 +8,15 @@ from discord.ext import commands
 
 
 class DeleteButton(discord.ui.Button):
+    def __init__(self, bot: commands.Bot, *args, **kwargs):
+        self.bot = bot
+        super().__init__(*args, **kwargs)
+
     async def callback(self, interaction: discord.Interaction):
-        if interaction.user.id == interaction.message.reference.cached_message.author.id:
+        if (message := interaction.message.reference.cached_message) is None:
+            channel = await self.bot.fetch_channel(interaction.message.reference.channel_id)
+            message = await channel.fetch_message(interaction.message.reference.message_id)
+        if interaction.user.id == message.author.id:
             await interaction.message.delete()
 
 
@@ -21,7 +28,7 @@ class TeX(commands.Cog):
 
         async with ctx.channel.typing():
 
-            view = discord.ui.View(DeleteButton(label='Delete'))
+            view = discord.ui.View(DeleteButton(self.bot, label='Delete'))
 
             code = code.replace('```tex', '').replace('```', '').strip()
 
