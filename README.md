@@ -18,7 +18,7 @@ This is a bot for internal use that adds music playback and other functions to C
 
 Set `CODERUNBOT_TOKEN` and `GOOGLE_API_KEY` in the `.env`.
 
-### with venv
+### with venv (recommended)
 
 ```
 $ source /path/to/venv/bin/activate
