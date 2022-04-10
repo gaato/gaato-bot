@@ -18,11 +18,19 @@ This is a bot for internal use that adds music playback and other functions to C
 
 Set `CODERUNBOT_TOKEN` and `GOOGLE_API_KEY` in the `.env`.
 
-**Do the following in venv!**
+### with venv
 
 ```
+$ source /path/to/venv/bin/activate
 $ pip install pip-tools
 $ pip-sync
+$ python -m bots
+```
+
+### without venv
+
+```
+$ pip install -r requirements.txt
 $ python -m bots
 ```
 
