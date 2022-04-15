@@ -1,6 +1,11 @@
+import os
+import pathlib
+import traceback
+
 import discord
 from discord.ext import commands
-import traceback
+
+BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
 class Bot(commands.Bot):
@@ -19,6 +24,17 @@ class Bot(commands.Bot):
     async def on_ready(self):
         print('起動しました')
     
+    async def on_message(self, message):
+        opt_out_users = []
+        if os.path.exists(BASE_DIR / 'data' / 'opt-out-users.txt'):
+            with open(BASE_DIR / 'data' / 'opt-out-users.txt', 'r') as f:
+                for line in f.readlines():
+                    if line.strip():
+                        opt_out_users.append(int(line))
+        if message.author.id in opt_out_users:
+            return
+        await super().on_message(message)
+
     async def on_message_edit(self, before, after):
         if before.content == after.content:
             return

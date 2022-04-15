@@ -9,7 +9,7 @@ from discord.ext import commands
 
 
 URL = 'https://wandbox.org/api/compile.json'
-BADE_DIR = pathlib.Path(__file__).parent.parent
+BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
 class DeleteButton(discord.ui.Button):
@@ -35,7 +35,7 @@ class Code(commands.Cog):
 
         view = discord.ui.View(DeleteButton(self.bot, label='Delete'))
 
-        with open(BADE_DIR / 'config' / 'languages.json', 'r') as f:
+        with open(BASE_DIR / 'config' / 'languages.json', 'r') as f:
             language_dict = json.load(f)
         code = re.sub(r'```[A-z\-\+]*\n', '', code).replace('```', '')
         stdin = ''
