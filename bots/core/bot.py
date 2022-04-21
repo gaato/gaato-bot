@@ -22,7 +22,7 @@ class Bot(commands.Bot):
             print(cog + 'をロードしました')
 
     async def on_ready(self):
-        print('起動しました')
+        print(f'Logged in as {self.user} (ID: {self.user.id})')
     
     async def on_message(self, message):
         opt_out_users = []
