@@ -12,7 +12,25 @@ URL = 'https://wandbox.org/api/compile.json'
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
+class LimitedSizeDict(dict):
+
+    def __init__(self, size_limit=None, *args, **kwds):
+        self.size_limit = size_limit
+        super().__init__(*args, **kwds)
+        self._check_size_limit()
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self._check_size_limit()
+
+    def _check_size_limit(self):
+        if self.size_limit is not None:
+            while len(self) > self.size_limit:
+                self.popitem(last=False)
+
+
 class DeleteButton(discord.ui.Button):
+
     def __init__(self, bot: commands.Bot, *args, **kwargs):
         self.bot = bot
         super().__init__(*args, **kwargs)
@@ -26,12 +44,18 @@ class DeleteButton(discord.ui.Button):
 
 
 class Code(commands.Cog):
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.user_message_id_to_bot_message = LimitedSizeDict(size_limit=100)
 
-    @commands.command()
-    async def run(self, ctx: commands.Context, language: str, *, code: str):
-        """Run code"""
+    @commands.Cog.listener()
+    async def on_message_edit(self, before: discord.Message, after: discord.Message):
+        if before.content != after.content:
+            if before.id in self.user_message_id_to_bot_message:
+                await self.user_message_id_to_bot_message[before.id].delete()
+
+    async def _run(self, ctx: commands.Context, language: str, code: str):
 
         view = discord.ui.View(DeleteButton(self.bot, label='Delete'))
 
@@ -110,6 +134,12 @@ class Code(commands.Cog):
             icon_url=ctx.author.display_avatar.url
         )
         return await ctx.reply(embed=embed, files=files, view=view)
+
+    @commands.command()
+    async def run(self, ctx: commands.Context, language: str, *, code: str):
+        """Run code"""
+        m = await self._run(ctx, language, code)
+        self.user_message_id_to_bot_message[ctx.message.id] = m
 
 
 def setup(bot):
