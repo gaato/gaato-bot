@@ -19,7 +19,7 @@ class Bot(commands.Bot):
     def load_cogs(self, cogs):
         for cog in cogs:
             self.load_extension(cog)
-            print(cog + 'をロードしました')
+            print('Loaded' + cog)
 
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
@@ -45,9 +45,9 @@ class Bot(commands.Bot):
         try:
             self.loop.run_until_complete(self.start(self.token))
         except discord.LoginFailure:
-            print('Discord Tokenが不正です')
+            print('Invalid Discord Token')
         except KeyboardInterrupt:
-            print('終了します')
+            print('Shutdown')
             self.loop.run_until_complete(self.close())
         except:
             traceback.print_exc()
