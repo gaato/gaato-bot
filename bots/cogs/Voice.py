@@ -56,7 +56,7 @@ class Song:
     @classmethod
     def from_youtube_search(cls, keyword, user):
         youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
-        youtube_query = youtube.search().list(q=keyword, part='id,snippet', maxResults=1)
+        youtube_query = youtube.search().list(type='video', q=keyword, part='id,snippet', maxResults=1)
         youtube_res = youtube_query.execute()
         title = youtube_res['items'][0]['snippet']['title']
         url = 'https://www.youtube.com/watch?v=' + youtube_res['items'][0]['id']['videoId']
