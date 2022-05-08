@@ -26,9 +26,9 @@ class LimitedSizeDict(dict):
 
 class DeleteButton(discord.ui.Button):
 
-    def __init__(self, bot: commands.Bot, *args, **kwargs):
+    def __init__(self, bot: commands.Bot):
         self.bot = bot
-        super().__init__(*args, **kwargs)
+        super().__init__(label='Delete')
 
     async def callback(self, interaction: discord.Interaction):
         if (message := interaction.message.reference.cached_message) is None:
@@ -54,7 +54,7 @@ class TeX(commands.Cog):
 
         async with ctx.channel.typing():
 
-            view = discord.ui.View(DeleteButton(self.bot, label='Delete'))
+            view = discord.ui.View(DeleteButton(self.bot))
 
             code = code.replace('```tex', '').replace('```', '').strip()
 

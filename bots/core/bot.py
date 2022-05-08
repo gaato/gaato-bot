@@ -19,7 +19,7 @@ class Bot(commands.Bot):
     def load_cogs(self, cogs):
         for cog in cogs:
             self.load_extension(cog)
-            print('Loaded' + cog)
+            print('Loaded ' + cog)
 
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
