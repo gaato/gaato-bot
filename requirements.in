@@ -1,4 +1,4 @@
-py-cord[voice]==2.0.0b5
+py-cord[voice]==2.0.0
 aiohttp
 python-dotenv
 yt-dlp>=2022.3.8.2
