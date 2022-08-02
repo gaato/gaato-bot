@@ -58,7 +58,7 @@ class TeX(commands.Cog):
 
             code = code.replace('```tex', '').replace('```', '').strip()
 
-            url = f'https://gaato.net/api/tex'
+            url = f'http://localhost/api/tex'
             params = {
                 'type': file_type,
                 'plain': plain,
