@@ -19,7 +19,9 @@ brotli==1.0.9
 cachetools==5.0.0
     # via google-auth
 certifi==2021.10.8
-    # via requests
+    # via
+    #   requests
+    #   yt-dlp
 cffi==1.15.0
     # via pynacl
 charset-normalizer==2.0.12
@@ -66,7 +68,7 @@ protobuf==3.19.4
     # via
     #   google-api-core
     #   googleapis-common-protos
-py-cord[voice]==2.0.0
+py-cord[voice]==2.1.1
     # via -r requirements.in
 pyasn1==0.4.8
     # via
@@ -104,5 +106,5 @@ websockets==10.2
     # via yt-dlp
 yarl==1.7.2
     # via aiohttp
-yt-dlp==2022.3.8.2
+yt-dlp==2022.8.19
     # via -r requirements.in
