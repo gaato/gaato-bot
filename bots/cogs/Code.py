@@ -7,7 +7,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from . import SUPPORT_SERVER_LINK
+from .. import SUPPORT_SERVER_LINK
+from . import DeleteButton
 
 
 URL = 'https://wandbox.org/api/compile.json'
@@ -29,20 +30,6 @@ class LimitedSizeDict(dict):
         if self.size_limit is not None:
             while len(self) > self.size_limit:
                 self.popitem(last=False)
-
-
-class DeleteButton(discord.ui.Button):
-
-    def __init__(self, bot: commands.Bot):
-        self.bot = bot
-        super().__init__(label='Delete')
-
-    async def callback(self, interaction: discord.Interaction):
-        if (message := interaction.message.reference.cached_message) is None:
-            channel = await self.bot.fetch_channel(interaction.message.reference.channel_id)
-            message = await channel.fetch_message(interaction.message.reference.message_id)
-        if interaction.user.id == message.author.id:
-            await interaction.message.delete()
 
 
 class Code(commands.Cog):
@@ -101,6 +88,10 @@ class Code(commands.Cog):
                         title='Connection Error',
                         description=f'{r.status}',
                         color=0xff0000
+                    )
+                    embed.set_author(
+                        name=ctx.author.name,
+                        icon_url=ctx.author.display_avatar.url
                     )
                     return await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
 

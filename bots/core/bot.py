@@ -23,7 +23,8 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
-    
+        print(f'Pycord Version: {discord.version_info}')
+
     async def on_message(self, message):
         opt_out_users = []
         if os.path.exists(BASE_DIR / 'data' / 'opt-out-users.txt'):
