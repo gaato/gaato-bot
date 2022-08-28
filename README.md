@@ -14,7 +14,7 @@ This is a bot for internal use that adds music playback and other functions to C
 
 - [Privacy Policy](bots/config/privacy-policy.md)
 - [Invite Link](https://discord.com/api/oauth2/authorize?client_id=761428259241328680&permissions=0&scope=bot)
-- [Support Server](https://discord.gg/qRpYRTgvXM)
+- [Our Discord Server](https://discord.gg/qRpYRTgvXM)
 
 ## How to run (CodeRunBot)
 
