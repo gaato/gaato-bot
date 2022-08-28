@@ -7,6 +7,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 
+from . import SUPPORT_SERVER_LINK
+
 
 URL = 'https://wandbox.org/api/compile.json'
 BASE_DIR = pathlib.Path(__file__).parent.parent
@@ -100,7 +102,7 @@ class Code(commands.Cog):
                         description=f'{r.status}',
                         color=0xff0000
                     )
-                    return await ctx.reply(embed=embed, view=view)
+                    return await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
 
         embed = discord.Embed(title='Result')
         embed_color = 0xff0000

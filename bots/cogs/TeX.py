@@ -6,6 +6,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 
+from . import SUPPORT_SERVER_LINK
+
 
 class LimitedSizeDict(dict):
 
@@ -74,7 +76,7 @@ class TeX(commands.Cog):
                             description=f'{r.status}',
                             color=0xff0000,
                         )
-                        return await ctx.reply(embed=embed, view=view)
+                        return await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
 
             match result['status']:
                 case 0:
@@ -124,7 +126,7 @@ class TeX(commands.Cog):
                         name=ctx.author.name,
                         icon_url=ctx.author.display_avatar.url,
                     )
-                    return await ctx.reply(embed=embed, view=view)
+                    return await ctx.reply(content=f'Please report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
 
     @commands.command()
     async def tex(self, ctx: commands.Context, *, code: str):
@@ -137,7 +139,6 @@ class TeX(commands.Cog):
         """TeX to image (out of math mode)"""
         m = await self.respond(ctx, code, 'png', True, False)
         self.user_message_id_to_bot_message[ctx.message.id] = m
-
 
     @commands.command()
     async def stex(self, ctx: commands.Context, *, code: str):
