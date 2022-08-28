@@ -7,8 +7,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK
-from . import DeleteButton
+from .. import SUPPORT_SERVER_LINK, DeleteButton
 
 
 URL = 'https://wandbox.org/api/compile.json'

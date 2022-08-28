@@ -6,8 +6,8 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK
-from . import DeleteButton
+from .. import SUPPORT_SERVER_LINK, DeleteButton
+
 
 class LimitedSizeDict(dict):
 

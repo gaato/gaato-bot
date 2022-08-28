@@ -5,6 +5,9 @@ import traceback
 import discord
 from discord.ext import commands
 
+from .. import SUPPORT_SERVER_LINK, DeleteButton
+
+
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
@@ -23,7 +26,7 @@ class Bot(commands.Bot):
 
     async def on_ready(self):
         print(f'Logged in as {self.user} (ID: {self.user.id})')
-        print(f'Pycord Version: {discord.version_info}')
+        print(f'Pycord Version: {discord.__version__}')
 
     async def on_message(self, message):
         opt_out_users = []
@@ -41,7 +44,21 @@ class Bot(commands.Bot):
             return
         await self.on_message(after)
 
-    # 起動用の補助関数です
+    async def on_command_error(self, ctx, exception):
+        if isinstance(exception, commands.CommandNotFound):
+            return
+        view = discord.ui.View(DeleteButton(self))
+        embed = discord.Embed(
+            title='Unhandled Error',
+            color=0xff0000,
+        )
+        embed.set_author(
+            name=ctx.author.name,
+            icon_url=ctx.author.display_avatar.url,
+        )
+        await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
+        return await super().on_command_error(ctx, exception)
+
     def run(self):
         try:
             self.loop.run_until_complete(self.start(self.token))
