@@ -46,7 +46,7 @@ class TeX(commands.Cog):
 
             code = code.replace('```tex', '').replace('```', '').strip()
 
-            url = 'http://127.0.0.1:8000/api/tex'
+            url = 'http://127.0.0.1:9000/api/tex'
             params = {
                 'type': file_type,
                 'plain': plain,
