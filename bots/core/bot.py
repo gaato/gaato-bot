@@ -47,6 +47,19 @@ class Bot(commands.Bot):
     async def on_command_error(self, ctx, exception):
         if isinstance(exception, commands.CommandNotFound):
             return
+        if isinstance(exception, commands.UserInputError):
+            view = discord.ui.View(DeleteButton(self))
+            embed = discord.Embed(
+                title='Invalid Input',
+                description=f'```\n{exception}\n```',
+                color=0xff0000,
+            )
+            embed.set_author(
+                name=ctx.author.name,
+                icon_url=ctx.author.display_avatar.url,
+            )
+            await ctx.reply(embed=embed, view=view)
+            return
         view = discord.ui.View(DeleteButton(self))
         embed = discord.Embed(
             title='Unhandled Error',
