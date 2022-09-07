@@ -52,7 +52,7 @@ class Song:
     def from_url(cls, url, user):
         meta = ytdl.extract_info(url, download=False)
         return cls(meta.get('title'), url, meta.get('thumbnail'), user)
-    
+
     @classmethod
     def from_youtube_search(cls, keyword, user):
         youtube = build('youtube', 'v3', developerKey=GOOGLE_API_KEY)
@@ -231,6 +231,8 @@ class Voice(commands.Cog):
         else:
             songs = [Song.from_youtube_search(url_or_keyword, ctx.author)]
 
+        position = str(len(status.get_list()) + 1) if status.playing else 'Now'
+
         for song in songs:
             await status.add_audio(song)
 
@@ -239,16 +241,15 @@ class Voice(commands.Cog):
                 title=f'{discord.utils.escape_markdown(songs[0].title)} をキューに追加しました',
                 url=songs[0].url,
             )
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
             if songs[0].thumbnail:
                 embed.set_thumbnail(url=songs[0].thumbnail)
-            await ctx.send(embed=embed)
         else:
             embed = discord.Embed(
                 title=f'{len(songs)} 曲をキューに追加しました',
             )
-            embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
-            await ctx.send(embed=embed)
+        embed.add_field(name='Position in queue', value=position)
+        embed.set_author(name=ctx.author.name, icon_url=ctx.author.display_avatar.url)
+        await ctx.send(embed=embed)
 
     @commands.command(aliases=['s'])
     async def skip(self, ctx: commands.Context):
