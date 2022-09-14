@@ -18,7 +18,7 @@ This is a bot for internal use that adds music playback and other functions to C
 
 ## How to run (CodeRunBot)
 
-Set `CODERUNBOT_TOKEN` and `GOOGLE_API_KEY` in the `.env`.
+Set `CODERUNBOT_TOKEN` in the `.env`.
 
 ### with venv (recommended)
 
@@ -38,7 +38,7 @@ $ python -m bots
 
 ## How to run (gaato bot)
 
-Basically the same as CodeRunBot, but set `.env` to `GAATO_BOT_TOKEN` and the execution command is as follows. You also need ffmpeg.
+Basically the same as CodeRunBot, but set `.env` to `GAATO_BOT_TOKEN`, `GOOGLE_API_KEY` and `WOLFRAM_APPID` and the execution command is as follows. You also need ffmpeg.
 
 ```
 $ python -m bots -g
