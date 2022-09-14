@@ -42,6 +42,11 @@ class Wolfram(commands.Cog):
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
+    @commands.Cog.listener()
+    async def on_message_delete(self, message: discord.Message):
+        if message.id in self.user_message_id_to_bot_message:
+            await self.user_message_id_to_bot_message[message.id].delete()
+
 
     @commands.command(aliases=['wolfram'])
     async def wolf(self, ctx: commands.Context, *, query: str):
