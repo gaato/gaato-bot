@@ -1,5 +1,6 @@
 import base64
 import io
+from collections import OrderedDict
 from typing import Optional
 
 import aiohttp
@@ -9,7 +10,7 @@ from discord.ext import commands
 from .. import SUPPORT_SERVER_LINK, DeleteButton
 
 
-class LimitedSizeDict(dict):
+class LimitedSizeDict(OrderedDict):
 
     def __init__(self, size_limit=None, *args, **kwds):
         self.size_limit = size_limit

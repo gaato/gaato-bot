@@ -2,6 +2,7 @@ import io
 import json
 import pathlib
 import re
+from collections import OrderedDict
 
 import aiohttp
 import discord
@@ -14,7 +15,7 @@ URL = 'https://wandbox.org/api/compile.json'
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
-class LimitedSizeDict(dict):
+class LimitedSizeDict(OrderedDict):
 
     def __init__(self, size_limit=None, *args, **kwds):
         self.size_limit = size_limit
