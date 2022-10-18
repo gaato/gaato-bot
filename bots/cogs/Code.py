@@ -7,6 +7,7 @@ from collections import OrderedDict
 import aiohttp
 import discord
 from discord.ext import commands
+from discord.commands import message_command
 
 from .. import SUPPORT_SERVER_LINK, DeleteButton
 
@@ -133,6 +134,11 @@ class Code(commands.Cog):
         """Run code"""
         m = await self._run(ctx, language, code)
         self.user_message_id_to_bot_message[ctx.message.id] = m
+
+
+    @message_command()
+    async def escape(self, ctx: discord.ApplicationContext, message: discord.Message):
+        await ctx.respond(discord.utils.escape_markdown(discord.utils.escape_mentions(message.content)), ephemeral=True)
 
 
 def setup(bot):
