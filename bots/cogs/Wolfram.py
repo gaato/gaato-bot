@@ -1,5 +1,6 @@
 import os
 import pathlib
+from collections import OrderedDict
 
 import aiohttp
 import discord
@@ -13,7 +14,7 @@ URL = 'http://api.wolframalpha.com/v2/query'
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
-class LimitedSizeDict(dict):
+class LimitedSizeDict(OrderedDict):
 
     def __init__(self, size_limit=None, *args, **kwds):
         self.size_limit = size_limit
