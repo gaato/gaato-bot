@@ -16,6 +16,11 @@ This is a bot for internal use that adds music playback and other functions to C
 - [Invite Link](https://discord.com/api/oauth2/authorize?client_id=761428259241328680&permissions=0&scope=bot)
 - [Discord Server](https://discord.gg/qRpYRTgvXM)
 
+## Requirements
+
+- Python >= 3.10
+- [tex.gaato.net](https://github.com/gaato/tex.gaato.net)
+
 ## How to run (CodeRunBot)
 
 Set `CODERUNBOT_TOKEN` in the `.env`.
