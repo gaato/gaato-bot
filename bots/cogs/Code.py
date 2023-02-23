@@ -49,13 +49,25 @@ class Code(commands.Cog):
 
         view = discord.ui.View(DeleteButton(self.bot))
 
+        async with aiohttp.ClientSession() as session:
+            async with session.get('https://wandbox.org/api/list.json') as r:
+                if r.status == 200:
+                    result =  await r.json()
+                    language_names = set(map(lambda data:data['language'], result))
+                    languages_dict = {}
+                    for language_name in language_names:
+                        language_information = next(filter(lambda language_information: language_information['language'] == language_name, result))
+                        languages_dict[language_name.lower().replace(' ', '')] = language_information['name']
+                    with open(BASE_DIR / 'config' / 'languages.json', 'w') as f:
+                        json.dump(languages_dict, f, indent=4, sort_keys=True)
+
         with open(BASE_DIR / 'config' / 'languages.json', 'r') as f:
             language_dict = json.load(f)
         code = re.sub(r'```[A-z\-\+]*\n', '', code).replace('```', '')
         stdin = ''
         language = language.lower() \
             .replace('pp', '++').replace('sharp', '#') \
-            .replace('clisp', 'lisp').replace('lisp', 'clisp')
+            .replace('clisp', 'lisp')
         if language not in language_dict.keys():
             embed = discord.Embed(
                 title='The following languages are supported',
