@@ -130,3 +130,6 @@ dmypy.json
 
 # youtube-dl
 youtube-*
+
+# dynamic config file
+languages.json
