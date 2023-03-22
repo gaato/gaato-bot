@@ -17,7 +17,7 @@
     "lazyk": "lazyk",
     "lisp": "clisp-2.49",
     "lua": "lua-5.4.3",
-    "nim": "nim-1.6.10",
+    "nim": "nim-1.6.12",
     "ocaml": "ocaml-4.12.0",
     "openssl": "openssl-1.1.1k",
     "pascal": "fpc-3.2.0",
