@@ -7,13 +7,16 @@ from collections import OrderedDict
 import aiohttp
 import discord
 from discord.ext import commands, tasks
-from discord.commands import message_command
+from discord.commands import message_command, slash_command
 
 from .. import SUPPORT_SERVER_LINK, DeleteButton
 
 
-URL = 'https://wandbox.org/api/compile.json'
+URL = 'https://wandbox.org/api/'
 BASE_DIR = pathlib.Path(__file__).parent.parent
+
+
+AUTOCOMPLETE_LANGUAGES = ['pony', 'd', 'c#', 'typescript', 'sql', 'rust', 'scala', 'lazyk', 'php', 'c', 'java', 'r', 'openssl', 'groovy', 'swift', 'erlang', 'crystal', 'bashscript', 'zig', 'nim', 'haskell', 'c++', 'cpp', 'javascript', 'lisp', 'ruby', 'pascal', 'julia', 'ocaml', 'go', 'elixir', 'python', 'perl', 'vimscript', 'lua']
 
 
 class LimitedSizeDict(OrderedDict):
@@ -40,19 +43,14 @@ class Code(commands.Cog):
         self.user_message_id_to_bot_message = LimitedSizeDict(size_limit=100)
 
     @commands.Cog.listener()
-    async def on_ready(self):
-        self.update_languages.start()
-
-    @commands.Cog.listener()
     async def on_message_edit(self, before: discord.Message, after: discord.Message):
         if before.content != after.content:
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
-    @tasks.loop(hours=24)
-    async def update_languages(self):
+    async def get_languages(self) -> dict:
         async with aiohttp.ClientSession() as session:
-            async with session.get('https://wandbox.org/api/list.json') as r:
+            async with session.get(URL + 'list.json') as r:
                 if r.status == 200:
                     result = await r.json()
                     language_names = set(
@@ -63,14 +61,12 @@ class Code(commands.Cog):
                             lambda language_information: language_information['language'] == language_name, result))
                         languages_dict[language_name.lower().replace(
                             ' ', '')] = language_information['name']
-                    with open(BASE_DIR / 'config' / 'languages.json', 'w') as f:
-                        json.dump(languages_dict, f, indent=4, sort_keys=True)
+        print(languages_dict.keys())
+        return languages_dict
 
     async def _run(self, ctx: commands.Context, language: str, code: str):
         view = discord.ui.View(DeleteButton(self.bot))
-        await self.update_languages()
-        with open(BASE_DIR / 'config' / 'languages.json', 'r') as f:
-            language_dict = json.load(f)
+        language_dict = await self.get_languages()
         code = re.sub(r'```[A-z\-\+]*\n', '', code).replace('```', '')
         stdin = ''
         language = language.lower() \
@@ -101,7 +97,7 @@ class Code(commands.Cog):
             'compiler-option-raw': compiler_option,
         }
         async with aiohttp.ClientSession() as session:
-            async with session.post(URL, json=params) as r:
+            async with session.post(URL + 'compile.json', json=params) as r:
                 if r.status == 200:
                     result = await r.json()
                 else:
