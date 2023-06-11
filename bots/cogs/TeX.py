@@ -7,24 +7,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK, DeleteButton
-
-
-class LimitedSizeDict(OrderedDict):
-
-    def __init__(self, size_limit=None, *args, **kwds):
-        self.size_limit = size_limit
-        super().__init__(*args, **kwds)
-        self._check_size_limit()
-
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
-        self._check_size_limit()
-
-    def _check_size_limit(self):
-        if self.size_limit is not None:
-            while len(self) > self.size_limit:
-                self.popitem(last=False)
+from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
 
 
 class TeX(commands.Cog):
