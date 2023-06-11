@@ -98,6 +98,12 @@ six==1.16.0
     # via
     #   google-auth
     #   google-auth-httplib2
+sudachidict-core==20230110
+    # via -r requirements.in
+sudachipy==0.6.7
+    # via
+    #   -r requirements.in
+    #   sudachidict-core
 typing-extensions==4.4.0
     # via py-cord
 uritemplate==4.1.1

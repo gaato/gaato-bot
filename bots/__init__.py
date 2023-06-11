@@ -1,8 +1,8 @@
 import re
+from collections import OrderedDict
 
 import discord
 from discord.ext import commands
-
 
 SUPPORT_SERVER_LINK = 'https://discord.gg/qRpYRTgvXM'
 
@@ -21,3 +21,20 @@ class DeleteButton(discord.ui.Button):
                 break
         if user_id is not None and interaction.user.id == user_id:
             await interaction.message.delete()
+
+
+class LimitedSizeDict(OrderedDict):
+
+    def __init__(self, size_limit=None, *args, **kwds):
+        self.size_limit = size_limit
+        super().__init__(*args, **kwds)
+        self._check_size_limit()
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key, value)
+        self._check_size_limit()
+
+    def _check_size_limit(self):
+        if self.size_limit is not None:
+            while len(self) > self.size_limit:
+                self.popitem(last=False)
