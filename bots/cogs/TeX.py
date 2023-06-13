@@ -119,7 +119,7 @@ class TeXModal(discord.ui.Modal):
         self.add_item(discord.ui.InputText(
             label = 'Text' if plain else 'Code',
             placeholder='Input TeX code here',
-            style = discord.InputTextStyle.long if plain else discord.InputTextStyle.short,
+            style=discord.InputTextStyle.long,
             value=value,
         ))
 
