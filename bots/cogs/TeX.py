@@ -7,7 +7,7 @@ import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
+from .. import SUPPORT_SERVER_LINK, OldDeleteButton, LimitedSizeDict
 
 
 async def respond_core(
@@ -123,7 +123,7 @@ class TeX(commands.Cog):
 
     async def respond(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
         async with ctx.channel.typing():
-            view = discord.ui.View(DeleteButton(self.bot))
+            view = discord.ui.View(OldDeleteButton(self.bot))
             code = code.replace('```tex', '').replace('```', '').strip()
             content, embed, file = await respond_core(ctx, code, file_type, plain, spoiler)
             m = await ctx.send(content=content, embed=embed, file=file, view=view)

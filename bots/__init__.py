@@ -7,7 +7,7 @@ from discord.ext import commands
 SUPPORT_SERVER_LINK = 'https://discord.gg/qRpYRTgvXM'
 
 
-class DeleteButton(discord.ui.Button):
+class OldDeleteButton(discord.ui.Button):
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
