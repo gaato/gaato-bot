@@ -2,15 +2,13 @@ import base64
 import io
 import pathlib
 import sqlite3
-from collections import OrderedDict
-from typing import Optional, Tuple, Union
+from typing import Optional, Tuple
 
 import aiohttp
 import discord
 from discord.ext import commands
 
 from .. import SUPPORT_SERVER_LINK, LimitedSizeDict, OldDeleteButton
-
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
 dbname = BASE_DIR.parent / 'db.sqlite3'
@@ -94,11 +92,12 @@ async def respond_core(
             return f'Please report us!\n{SUPPORT_SERVER_LINK}', embed, None
 
 
-class DeleteButton(discord.ui.Button):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class TeXView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    async def callback(self, interaction: discord.Interaction):
+    @discord.ui.button(label='Delete', custom_id='tex-delete', style=discord.ButtonStyle.danger)
+    async def delete_callback(self, button, interaction: discord.Interaction):
         c = conn.cursor()
         c.execute('SELECT * FROM tex WHERE message_id = ?', (interaction.message.id,))
         result = c.fetchone()
@@ -121,12 +120,8 @@ class DeleteButton(discord.ui.Button):
         await interaction.message.delete()
         c.execute('DELETE FROM tex WHERE message_id = ?', (interaction.message.id,))
 
-
-class EditButton(discord.ui.Button):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, interaction: discord.Interaction):
+    @discord.ui.button(label='Edit', custom_id='tex-edit', style=discord.ButtonStyle.primary)
+    async def edit_callback(self, button, interaction: discord.Interaction):
         c = conn.cursor()
         c.execute('SELECT * FROM tex WHERE message_id = ?', (interaction.message.id,))
         result = c.fetchone()
@@ -138,23 +133,13 @@ class EditButton(discord.ui.Button):
             )
             await interaction.response.send_message(embed=embed, ephemeral=True)
             return
-        if result[1] != interaction.user.id:
-            embed = discord.Embed(
-                title='Error',
-                description='You are not the author.',
-                color=0xff0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        c.execute('DELETE FROM tex WHERE message_id = ?', (interaction.message.id,))
-        await interaction.response.send_modal(TeXModal(bool(result[3]), bool(result[4]), result[2], deleted_message=interaction.message))
+        await interaction.response.send_modal(TeXModal(bool(result[3]), bool(result[4]), result[2]))
 
 
 class TeXModal(discord.ui.Modal):
-    def __init__(self, plain, spoiler, value='', title='LaTeX to Image', deleted_message=None, *arg, **kwargs):
+    def __init__(self, plain, spoiler, value='', title='LaTeX to Image', *arg, **kwargs):
         self.plain = plain
         self.spoiler = spoiler
-        self.deleted_message = deleted_message
         super().__init__(title=title, *arg, **kwargs)
         self.add_item(discord.ui.InputText(
             label = 'Text' if plain else 'Code',
@@ -172,13 +157,10 @@ class TeXModal(discord.ui.Modal):
             self.plain,
             self.spoiler,
         )
-        view = discord.ui.View(DeleteButton(label='Delete', style=discord.ButtonStyle.danger), EditButton(label='Edit', style=discord.ButtonStyle.primary))
+        view = TeXView()
         m = await interaction.followup.send(content=content, embed=embed, file=file, view=view, wait=True)
         c = conn.cursor()
         c.execute('INSERT INTO tex VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.children[0].value, int(self.plain), int(self.spoiler)))
-        if self.deleted_message is not None:
-            await self.deleted_message.delete()
-            c.execute('DELETE FROM tex WHERE message_id = ?', (self.deleted_message.id,))
 
 
 class TeX(commands.Cog):

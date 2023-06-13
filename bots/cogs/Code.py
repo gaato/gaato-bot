@@ -2,7 +2,7 @@ import io
 import pathlib
 import re
 import sqlite3
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple
 
 import aiohttp
 import discord
@@ -10,7 +10,7 @@ import requests
 from discord.ext import commands
 from discord.interactions import Interaction
 
-from .. import OldDeleteButton, LimitedSizeDict
+from .. import LimitedSizeDict, OldDeleteButton
 
 URL = 'https://wandbox.org/api/'
 BASE_DIR = pathlib.Path(__file__).parent.parent
@@ -19,7 +19,7 @@ BASE_DIR = pathlib.Path(__file__).parent.parent
 dbname = BASE_DIR.parent / 'db.sqlite3'
 conn = sqlite3.connect(dbname, check_same_thread=False)
 c = conn.cursor()
-c.execute('CREATE TABLE IF NOT EXISTS code (interaction_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)')
+c.execute('CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)')
 
 
 def get_autocomplete_languages() -> List[str]:
@@ -58,7 +58,7 @@ async def get_languages() -> dict:
 
 
 async def run_core(
-        ctx: Union[discord.ApplicationContext, commands.Context],
+        author: discord.User,
         language: str, code: str,
         stdin: str = '',
 ) -> Tuple[discord.Embed, Optional[discord.File]]:
@@ -70,8 +70,8 @@ async def run_core(
             color=0xff0000
         )
         embed.set_author(
-            name=ctx.author.name,
-            icon_url=ctx.author.display_avatar.url
+            name=author.name,
+            icon_url=author.display_avatar.url
         )
         return embed, None
     if language == 'nim':
@@ -99,8 +99,8 @@ async def run_core(
                     color=0xff0000
                 )
                 embed.set_author(
-                    name=ctx.author.name,
-                    icon_url=ctx.author.display_avatar.url
+                    name=author.name,
+                    icon_url=author.display_avatar.url
                 )
                 return embed, None
     embed = discord.Embed(title='Result')
@@ -131,19 +131,59 @@ async def run_core(
             )
     embed.color = embed_color
     embed.set_author(
-        name=ctx.author.name,
-        icon_url=ctx.author.display_avatar.url
+        name=author.name,
+        icon_url=author.display_avatar.url
     )
     return embed, files
 
 
-class ViewCodeButton(discord.ui.Button):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+class RunView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
 
-    async def callback(self, interaction: Interaction):
+    @discord.ui.button(label='Delete', custom_id='code-delete', style=discord.ButtonStyle.danger)
+    async def delete_callback(self, button, interaction: discord.Interaction):
         c = conn.cursor()
-        c.execute('SELECT * FROM code WHERE interaction_id = ?', (interaction.message.interaction.id,))
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        if result[1] != interaction.user.id:
+            embed = discord.Embed(
+                title='Error',
+                description='You are not the author.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await interaction.message.delete()
+        c.execute('DELETE FROM code WHERE message_id = ?', (interaction.message.id,))
+
+    @discord.ui.button(label='Edit', custom_id='code-edit', style=discord.ButtonStyle.primary)
+    async def edit_callback(self, button, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await interaction.response.send_modal(RunModal(result[2], code=result[3], stdin=result[4]))
+
+    @discord.ui.button(label='View Code', custom_id='code-view', style=discord.ButtonStyle.secondary)
+    async def view_callback(self, button, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
         result = c.fetchone()
         if result is None:
             embed = discord.Embed(
@@ -170,39 +210,9 @@ class ViewCodeButton(discord.ui.Button):
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 
-class DeleteButton(discord.ui.Button):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def callback(self, interaction: Interaction):
-        c = conn.cursor()
-        c.execute('SELECT * FROM code WHERE interaction_id = ?', (interaction.message.interaction.id,))
-        result = c.fetchone()
-        if result is None:
-            embed = discord.Embed(
-                title='Error',
-                description='Not found.',
-                color=0xff0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        if result[1] != interaction.user.id:
-            embed = discord.Embed(
-                title='Error',
-                description='You are not the author.',
-                color=0xff0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        await interaction.message.delete()
-        c.execute('DELETE FROM code WHERE interaction_id = ?', (interaction.message.interaction.id,))
-        conn.commit()
-
-
 class RunModal(discord.ui.Modal):
-    def __init__(self, ctx: discord.ApplicationContext, language: str, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.ctx = ctx
+    def __init__(self, language: str, title='Run code', code='', stdin='', *args, **kwargs):
+        super().__init__(title=title, *args, **kwargs)
         self.language = language.lower() \
             .replace('pp', '++').replace('sharp', '#') \
             .replace('clisp', 'lisp')
@@ -210,19 +220,21 @@ class RunModal(discord.ui.Modal):
             label='Code',
             placeholder='Write code here',
             style=discord.InputTextStyle.long,
+            value=code,
         ))
         self.add_item(discord.ui.InputText(
             label='Standard Input',
             required=False,
             style=discord.InputTextStyle.long,
+            value=stdin,
         ))
 
     async def callback(self, interaction: Interaction):
         await interaction.response.defer(invisible=False)
-        embed, files = await run_core(self.ctx, self.language, self.children[0].value, self.children[1].value)
-        view = discord.ui.View(ViewCodeButton(label='View Code'), DeleteButton(label='Delete'))
-        await interaction.followup.send(embed=embed, files=files, view=view)
-        c.execute('INSERT INTO code VALUES (?, ?, ?, ?, ?)', (self.ctx.interaction.id, self.ctx.author.id, self.language, self.children[0].value, self.children[1].value))
+        embed, files = await run_core(interaction.user, self.language, self.children[0].value, self.children[1].value)
+        view = RunView()
+        m = await interaction.followup.send(embed=embed, files=files, view=view, wait=True)
+        c.execute('INSERT INTO code VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.language, self.children[0].value, self.children[1].value))
 
 
 class Code(commands.Cog):
@@ -259,7 +271,7 @@ class Code(commands.Cog):
         )]
     )
     async def run_slash(self, ctx: discord.ApplicationContext, language: str):
-        await ctx.send_modal(RunModal(ctx, language, title='Run code'))
+        await ctx.send_modal(RunModal(language, title='Run code'))
 
 
 def setup(bot):
