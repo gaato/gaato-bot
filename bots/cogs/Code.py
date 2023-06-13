@@ -10,7 +10,7 @@ import requests
 from discord.ext import commands
 from discord.interactions import Interaction
 
-from .. import LimitedSizeDict, OldDeleteButton
+from .. import LimitedSizeDict, DeleteButton
 
 URL = 'https://wandbox.org/api/'
 BASE_DIR = pathlib.Path(__file__).parent.parent
@@ -103,7 +103,7 @@ async def run_core(
                     icon_url=author.display_avatar.url
                 )
                 return embed, None
-    embed = discord.Embed(title='Result')
+    embed = discord.Embed(title=f'Result ({language_dict[language]}):')
     embed_color = 0xff0000
     files = []
     for k, v in result.items():
@@ -137,36 +137,11 @@ async def run_core(
     return embed, files
 
 
-class RunView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=None)
+class EditButton(discord.ui.Button):
+    def __init__(self, label='Edit', style=discord.ButtonStyle.primary, **kwargs):
+        super().__init__(label=label, style=style, **kwargs)
 
-    @discord.ui.button(label='Delete', custom_id='code-delete', style=discord.ButtonStyle.danger)
-    async def delete_callback(self, button, interaction: discord.Interaction):
-        c = conn.cursor()
-        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
-        result = c.fetchone()
-        if result is None:
-            embed = discord.Embed(
-                title='Error',
-                description='Not found.',
-                color=0xff0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        if result[1] != interaction.user.id:
-            embed = discord.Embed(
-                title='Error',
-                description='You are not the author.',
-                color=0xff0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        await interaction.message.delete()
-        c.execute('DELETE FROM code WHERE message_id = ?', (interaction.message.id,))
-
-    @discord.ui.button(label='Edit', custom_id='code-edit', style=discord.ButtonStyle.primary)
-    async def edit_callback(self, button, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         c = conn.cursor()
         c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
         result = c.fetchone()
@@ -180,8 +155,12 @@ class RunView(discord.ui.View):
             return
         await interaction.response.send_modal(RunModal(result[2], code=result[3], stdin=result[4]))
 
-    @discord.ui.button(label='View Code', custom_id='code-view', style=discord.ButtonStyle.secondary)
-    async def view_callback(self, button, interaction: discord.Interaction):
+
+class ViewCodeButton(discord.ui.Button):
+    def __init__(self, label='View Code', style=discord.ButtonStyle.secondary, **kwargs):
+        super().__init__(label=label, style=style, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
         c = conn.cursor()
         c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
         result = c.fetchone()
@@ -211,7 +190,8 @@ class RunView(discord.ui.View):
             text=f'Requested by {interaction.user.name}',
             icon_url=interaction.user.display_avatar.url,
         )
-        await interaction.response.send_message(embed=embed)
+        view = discord.ui.View(DeleteButton(interaction.user))
+        await interaction.response.send_message(embed=embed, view=view)
 
 
 class RunModal(discord.ui.Modal):
@@ -236,7 +216,7 @@ class RunModal(discord.ui.Modal):
     async def callback(self, interaction: Interaction):
         await interaction.response.defer(invisible=False)
         embed, files = await run_core(interaction.user, self.language, self.children[0].value, self.children[1].value)
-        view = RunView()
+        view = discord.ui.View(DeleteButton(interaction.user), EditButton(), ViewCodeButton())
         m = await interaction.followup.send(embed=embed, files=files, view=view, wait=True)
         c.execute('INSERT INTO code VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.language, self.children[0].value, self.children[1].value))
 
@@ -255,7 +235,7 @@ class Code(commands.Cog):
     @commands.command()
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
-        view = discord.ui.View(OldDeleteButton(self.bot))
+        view = discord.ui.View(DeleteButton(ctx.author))
         embed, files = await run_core(ctx, language, code)
         m = await ctx.reply(embed=embed, files=files, view=view)
         self.user_message_id_to_bot_message[ctx.message.id] = m

@@ -5,7 +5,7 @@ import traceback
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK, OldDeleteButton
+from .. import SUPPORT_SERVER_LINK, DeleteButton
 
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
@@ -48,7 +48,7 @@ class Bot(commands.Bot):
         if isinstance(exception, commands.CommandNotFound):
             return
         if isinstance(exception, commands.UserInputError):
-            view = discord.ui.View(OldDeleteButton(self))
+            view = discord.ui.View(DeleteButton(ctx.author))
             embed = discord.Embed(
                 title='Invalid Input',
                 description=f'```\n{exception}\n```',
@@ -60,7 +60,7 @@ class Bot(commands.Bot):
             )
             await ctx.reply(embed=embed, view=view)
             return
-        view = discord.ui.View(OldDeleteButton(self))
+        view = discord.ui.View(DeleteButton(ctx.author))
         embed = discord.Embed(
             title='Unhandled Error',
             color=0xff0000,
