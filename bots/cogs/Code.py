@@ -207,7 +207,11 @@ class RunView(discord.ui.View):
             name=interaction.guild.get_member(result[1]).name,
             icon_url=interaction.guild.get_member(result[1]).display_avatar.url,
         )
-        await interaction.response.send_message(embed=embed, ephemeral=True)
+        embed.set_footer(
+            text=f'Requested by {interaction.user.name}',
+            icon_url=interaction.user.display_avatar.url,
+        )
+        await interaction.response.send_message(embed=embed)
 
 
 class RunModal(discord.ui.Modal):
