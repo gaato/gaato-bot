@@ -1,26 +1,243 @@
 import io
-import json
 import pathlib
 import re
-from collections import OrderedDict
+import sqlite3
+from typing import List, Optional, Tuple
 
 import aiohttp
 import discord
-from discord.ext import commands, tasks
-from discord.commands import message_command, slash_command
+import requests
+from discord.ext import commands
+from discord.interactions import Interaction
 
-from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
-
+from .. import LimitedSizeDict, OldDeleteButton
 
 URL = 'https://wandbox.org/api/'
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
-AUTOCOMPLETE_LANGUAGES = ['pony', 'd', 'c#', 'typescript', 'sql', 'rust', 'scala', 'lazyk', 'php', 'c', 'java', 'r', 'openssl', 'groovy', 'swift', 'erlang', 'crystal', 'bashscript', 'zig', 'nim', 'haskell', 'c++', 'cpp', 'javascript', 'lisp', 'ruby', 'pascal', 'julia', 'ocaml', 'go', 'elixir', 'python', 'perl', 'vimscript', 'lua']
+dbname = BASE_DIR.parent / 'db.sqlite3'
+conn = sqlite3.connect(dbname, check_same_thread=False)
+c = conn.cursor()
+c.execute('CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)')
+
+
+def get_autocomplete_languages() -> List[str]:
+    with requests.get(URL + 'list.json') as r:
+        r.raise_for_status()
+        result = r.json()
+        language_names = set(map(lambda data: data['language'].lower().replace(' ', ''), result))
+        print(list(language_names))
+        return list(language_names)
+
+autocomplete_languages = get_autocomplete_languages()
+
+def auto_complete_language(ctx: discord.AutocompleteContext) -> List[str]:
+    return list(
+        filter(
+            lambda language_code: language_code.startswith(ctx.value.lower()),
+            autocomplete_languages,
+        )
+    )
+
+
+async def get_languages() -> dict:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(URL + 'list.json') as r:
+            if r.status == 200:
+                result = await r.json()
+                language_names = set(
+                    map(lambda data: data['language'], result))
+                languages_dict = {}
+                for language_name in language_names:
+                    language_information = next(filter(
+                        lambda language_information: language_information['language'] == language_name, result))
+                    languages_dict[language_name.lower().replace(
+                        ' ', '')] = language_information['name']
+    return languages_dict
+
+
+async def run_core(
+        author: discord.User,
+        language: str, code: str,
+        stdin: str = '',
+) -> Tuple[discord.Embed, Optional[discord.File]]:
+    language_dict = await get_languages()
+    if language not in language_dict.keys():
+        embed = discord.Embed(
+            title='The following languages are supported',
+            description=', '.join(language_dict.keys()),
+            color=0xff0000
+        )
+        embed.set_author(
+            name=author.name,
+            icon_url=author.display_avatar.url
+        )
+        return embed, None
+    if language == 'nim':
+        compiler_option = '--hint[Processing]:off\n' \
+            '--hint[Conf]:off\n' \
+            '--hint[Link]:off\n' \
+            '--hint[SuccessX]:off'
+    else:
+        compiler_option = ''
+    url = URL + 'compile.json'
+    params = {
+        'compiler': language_dict[language],
+        'code': code,
+        'stdin': stdin,
+        'compiler-option-raw': compiler_option,
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(url, json=params) as r:
+            if r.status == 200:
+                result = await r.json()
+            else:
+                embed = discord.Embed(
+                    title='Connection Error',
+                    description=f'{r.status}',
+                    color=0xff0000
+                )
+                embed.set_author(
+                    name=author.name,
+                    icon_url=author.display_avatar.url
+                )
+                return embed, None
+    embed = discord.Embed(title='Result')
+    embed_color = 0xff0000
+    files = []
+    for k, v in result.items():
+        if k in ('program_message', 'compiler_message'):
+            continue
+        if v == '':
+            continue
+        if k == 'status' and v == '0':
+            embed_color = 0x007000
+        if language == 'nim' and k == 'compiler_error':
+            v = re.sub(r'CC: \S+\n', '', v)
+            if v == '':
+                continue
+        if len(v) > 1000 or len(v.split('\n')) > 100:
+            files.append(
+                discord.File(
+                    io.StringIO(v),
+                    k + '.txt'
+                )
+            )
+        else:
+            embed.add_field(
+                name=k,
+                value='```\n' + v + '\n```',
+            )
+    embed.color = embed_color
+    embed.set_author(
+        name=author.name,
+        icon_url=author.display_avatar.url
+    )
+    return embed, files
+
+
+class RunView(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label='Delete', custom_id='code-delete', style=discord.ButtonStyle.danger)
+    async def delete_callback(self, button, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        if result[1] != interaction.user.id:
+            embed = discord.Embed(
+                title='Error',
+                description='You are not the author.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await interaction.message.delete()
+        c.execute('DELETE FROM code WHERE message_id = ?', (interaction.message.id,))
+
+    @discord.ui.button(label='Edit', custom_id='code-edit', style=discord.ButtonStyle.primary)
+    async def edit_callback(self, button, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await interaction.response.send_modal(RunModal(result[2], code=result[3], stdin=result[4]))
+
+    @discord.ui.button(label='View Code', custom_id='code-view', style=discord.ButtonStyle.secondary)
+    async def view_callback(self, button, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM code WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        embed = discord.Embed(
+            title=result[2],
+            description = f'```{result[2]}\n{result[3]}```',
+            color=0x007000
+        )
+        if result[4] != '':
+            embed.add_field(
+                name='Standard Input',
+                value=f'```\n{result[4]}\n```',
+            )
+        embed.set_author(
+            name=interaction.guild.get_member(result[1]).name,
+            icon_url=interaction.guild.get_member(result[1]).display_avatar.url,
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+
+class RunModal(discord.ui.Modal):
+    def __init__(self, language: str, title='Run code', code='', stdin='', *args, **kwargs):
+        super().__init__(title=title, *args, **kwargs)
+        self.language = language.lower() \
+            .replace('pp', '++').replace('sharp', '#') \
+            .replace('clisp', 'lisp')
+        self.add_item(discord.ui.InputText(
+            label='Code',
+            placeholder='Write code here',
+            style=discord.InputTextStyle.long,
+            value=code,
+        ))
+        self.add_item(discord.ui.InputText(
+            label='Standard Input',
+            required=False,
+            style=discord.InputTextStyle.long,
+            value=stdin,
+        ))
+
+    async def callback(self, interaction: Interaction):
+        await interaction.response.defer(invisible=False)
+        embed, files = await run_core(interaction.user, self.language, self.children[0].value, self.children[1].value)
+        view = RunView()
+        m = await interaction.followup.send(embed=embed, files=files, view=view, wait=True)
+        c.execute('INSERT INTO code VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.language, self.children[0].value, self.children[1].value))
 
 
 class Code(commands.Cog):
-
     def __init__(self, bot: commands.Bot):
         self.bot = bot
         self.user_message_id_to_bot_message = LimitedSizeDict(size_limit=100)
@@ -31,112 +248,30 @@ class Code(commands.Cog):
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
-    async def get_languages(self) -> dict:
-        async with aiohttp.ClientSession() as session:
-            async with session.get(URL + 'list.json') as r:
-                if r.status == 200:
-                    result = await r.json()
-                    language_names = set(
-                        map(lambda data: data['language'], result))
-                    languages_dict = {}
-                    for language_name in language_names:
-                        language_information = next(filter(
-                            lambda language_information: language_information['language'] == language_name, result))
-                        languages_dict[language_name.lower().replace(
-                            ' ', '')] = language_information['name']
-        print(languages_dict.keys())
-        return languages_dict
-
-    async def _run(self, ctx: commands.Context, language: str, code: str):
-        view = discord.ui.View(DeleteButton(self.bot))
-        language_dict = await self.get_languages()
-        code = re.sub(r'```[A-z\-\+]*\n', '', code).replace('```', '')
-        stdin = ''
-        language = language.lower() \
-            .replace('pp', '++').replace('sharp', '#') \
-            .replace('clisp', 'lisp')
-        if language not in language_dict.keys():
-            embed = discord.Embed(
-                title='The following languages are supported',
-                description=', '.join(language_dict.keys()),
-                color=0xff0000
-            )
-            embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url
-            )
-            return await ctx.reply(embed=embed, view=view)
-        if language == 'nim':
-            compiler_option = '--hint[Processing]:off\n' \
-                '--hint[Conf]:off\n' \
-                '--hint[Link]:off\n' \
-                '--hint[SuccessX]:off'
-        else:
-            compiler_option = ''
-        params = {
-            'compiler': language_dict[language],
-            'code': code,
-            'stdin': stdin,
-            'compiler-option-raw': compiler_option,
-        }
-        async with aiohttp.ClientSession() as session:
-            async with session.post(URL + 'compile.json', json=params) as r:
-                if r.status == 200:
-                    result = await r.json()
-                else:
-                    embed = discord.Embed(
-                        title='Connection Error',
-                        description=f'{r.status}',
-                        color=0xff0000
-                    )
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar.url
-                    )
-                    return await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
-
-        embed = discord.Embed(title='Result')
-        embed_color = 0xff0000
-        files = []
-        for k, v in result.items():
-            if k in ('program_message', 'compiler_message'):
-                continue
-            if v == '':
-                continue
-            if k == 'status' and v == '0':
-                embed_color = 0x007000
-            if language == 'nim' and k == 'compiler_error':
-                v = re.sub(r'CC: \S+\n', '', v)
-                if v == '':
-                    continue
-            if len(v) > 1000 or len(v.split('\n')) > 100:
-                files.append(
-                    discord.File(
-                        io.StringIO(v),
-                        k + '.txt'
-                    )
-                )
-            else:
-                embed.add_field(
-                    name=k,
-                    value='```\n' + v + '\n```',
-                )
-        embed.color = embed_color
-        embed.set_author(
-            name=ctx.author.name,
-            icon_url=ctx.author.display_avatar.url
-        )
-        return await ctx.reply(embed=embed, files=files, view=view)
-
     @commands.command()
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
-        m = await self._run(ctx, language, code)
+        view = discord.ui.View(OldDeleteButton(self.bot))
+        embed, files = await run_core(ctx, language, code)
+        m = await ctx.reply(embed=embed, files=files, view=view)
         self.user_message_id_to_bot_message[ctx.message.id] = m
 
-    @message_command()
+    @discord.message_command()
     async def escape(self, ctx: discord.ApplicationContext, message: discord.Message):
         await ctx.respond(discord.utils.escape_markdown(discord.utils.escape_mentions(message.content)), ephemeral=True)
+
+    @discord.slash_command(
+        name='run',
+        description='Run code',
+        options=[discord.Option(
+            name='language',
+            description='Language',
+            required=True,
+            autocomplete=auto_complete_language,
+        )]
+    )
+    async def run_slash(self, ctx: discord.ApplicationContext, language: str):
+        await ctx.send_modal(RunModal(language, title='Run code'))
 
 
 def setup(bot):
