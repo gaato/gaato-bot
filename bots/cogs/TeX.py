@@ -133,7 +133,10 @@ class TeXModal(discord.ui.Modal):
             self.spoiler,
         )
         view = discord.ui.View(DeleteButton(interaction.user), EditButton())
-        m = await interaction.followup.send(content=content, embed=embed, file=file, view=view, wait=True)
+        if file is None:
+            m = await interaction.followup.send(content=content, embed=embed, view=view, wait=True)
+        else:
+            m = await interaction.followup.send(content=content, embed=embed, file=file, view=view, wait=True)
         c = conn.cursor()
         c.execute('INSERT INTO tex VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.children[0].value, int(self.plain), int(self.spoiler)))
 
@@ -155,7 +158,10 @@ class TeX(commands.Cog):
             view = discord.ui.View(DeleteButton(ctx.author))
             code = code.replace('```tex', '').replace('```', '').strip()
             content, embed, file = await respond_core(ctx.author, code, file_type, plain, spoiler)
-            m = await ctx.send(content=content, embed=embed, file=file, view=view)
+            if file is None:
+                m = await ctx.send(content=content, embed=embed, view=view)
+            else:
+                m = await ctx.send(content=content, embed=embed, file=file, view=view)
             return m
 
     @commands.command()
