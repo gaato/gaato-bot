@@ -8,6 +8,8 @@ import discord
 import requests
 from discord.ext import commands, pages
 
+from .. import DeleteButton
+
 dotenv.load_dotenv(verbose=True)
 BASE_URL = "https://api.cognitive.microsofttranslator.com"
 
@@ -116,7 +118,8 @@ class Translate(commands.Cog):
             name=ctx.author.display_name,
             icon_url=ctx.author.display_avatar.url,
         )
-        await ctx.respond(embed=embed)
+        view = discord.ui.View(DeleteButton(ctx.author))
+        await ctx.respond(embed=embed, view=view)
 
 
 def setup(bot):

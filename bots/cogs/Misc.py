@@ -1,6 +1,8 @@
 import discord
-from discord.ext import commands, pages
+from discord.ext import commands
 from sudachipy import tokenizer, dictionary
+
+from .. import DeleteButton
 
 
 class Misc(commands.Cog):
@@ -19,8 +21,8 @@ class Misc(commands.Cog):
         outputs = [f'{text}']
         for t in tokens:
             outputs.append(f'{t.surface()}\t{",".join(t.part_of_speech())}\t{t.reading_form()}\t{t.normalized_form()}')
-        await ctx.respond(f'```\n' + '\n'.join(outputs) + '\n```')
-
+        view = discord.ui.View(DeleteButton(ctx.author))
+        await ctx.respond(f'```\n' + '\n'.join(outputs) + '\n```', view=view)
 
 
 def setup(bot):

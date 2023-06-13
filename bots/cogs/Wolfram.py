@@ -53,7 +53,7 @@ class Wolfram(commands.Cog):
     async def wolf(self, ctx: commands.Context, *, query: str):
 
         async with ctx.channel.typing():
-            view = discord.ui.View(DeleteButton(self.bot))
+            view = discord.ui.View(DeleteButton(ctx.author))
 
             async with aiohttp.ClientSession() as session:
                 async with session.get(URL, params={'input': query, 'format': 'image,plaintext', 'output': 'JSON', 'appid': os.environ.get('WOLFRAM_APPID')}) as resp:
