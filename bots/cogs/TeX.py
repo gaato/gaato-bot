@@ -1,7 +1,7 @@
 import base64
 import io
 from collections import OrderedDict
-from typing import Optional
+from typing import Optional, Union, Tuple
 
 import aiohttp
 import discord
@@ -9,6 +9,103 @@ from discord.ext import commands
 
 from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
 
+
+async def respond_core(
+        ctx: Union[discord.ApplicationContext, commands.Context],
+        code: str, file_type: str,
+        plain: Optional[bool],
+        spoiler: bool
+    ) -> Tuple[str, discord.Embed, Optional[discord.File]]:
+        url = 'http://127.0.0.1:9000/api'
+        params = {
+            'type': file_type,
+            'plain': plain,
+            'code': code,
+        }
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=params) as r:
+                if r.status == 200:
+                    result = await r.json()
+                else:
+                    embed = discord.Embed(
+                        title='Connection Error',
+                        description=f'{r.status}',
+                        color=0xff0000,
+                    )
+                    embed.set_author(
+                        name=ctx.author.name,
+                        icon_url=ctx.author.display_avatar.url,
+                    )
+                    return '', embed, None
+        match result['status']:
+            case 0:
+                embed = discord.Embed(color=0x008000)
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                if file_type == 'png':
+                    embed.set_image(url='attachment://tex.png')
+                file = discord.File(
+                    io.BytesIO(base64.b64decode(result['data'])),
+                    filename='tex.png',
+                    spoiler=spoiler,
+                )
+                return '', embed, file
+            case 1:
+                embed = discord.Embed(
+                    title='Rendering Error',
+                    description=f'```\n{result["error"]}\n```',
+                    color=0xff0000,
+                )
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                return '', embed, None
+            case 2:
+                embed = discord.Embed(
+                    title='Timed Out',
+                    color=0xff0000,
+                )
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar,
+                )
+                return '', embed, None
+            case _:
+                embed = discord.Embed(
+                    title='Unhandled Error',
+                    color=0xff0000,
+                )
+                embed.set_author(
+                    name=ctx.author.name,
+                    icon_url=ctx.author.display_avatar.url,
+                )
+                return f'Please report us!\n{SUPPORT_SERVER_LINK}', embed, None
+
+
+class TeXModal(discord.ui.Modal):
+    def __init__(self, ctx: discord.ApplicationContext, plain, spoiler, *arg, **kwargs):
+        self.ctx = ctx
+        self.plain = plain
+        self.spoiler = spoiler
+        super().__init__(*arg, **kwargs)
+        self.add_item(discord.ui.InputText(
+            label = 'Text' if plain else 'Code',
+            placeholder='Input TeX code here',
+            multiline=True,
+        ))
+
+    async def callback(self, interaction: discord.Interaction):
+        content, embed, file = await respond_core(
+            self.ctx,
+            self.children[0].value,
+            'png',
+            self.plain,
+            self.spoiler,
+        )
+        await interaction.respond(content=content, embed=embed, file=file)
 
 class TeX(commands.Cog):
 
@@ -22,76 +119,13 @@ class TeX(commands.Cog):
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
-    async def respond_core(self, code: str, file_type: str, plain: Optional[bool], spoiler: bool) -> dict:
-            url = 'http://127.0.0.1:9000/api'
-            params = {
-                'type': file_type,
-                'plain': plain,
-                'code': code,
-            }
-            async with aiohttp.ClientSession() as session:
-                async with session.post(url, json=params) as r:
-                    if r.status == 200:
-                        result = await r.json()
-                    else:
-                        raise Exception(
-                            f'Failed to connect to {url} (status: {r.status})')
-            return result
-
     async def respond(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
         async with ctx.channel.typing():
             view = discord.ui.View(DeleteButton(self.bot))
             code = code.replace('```tex', '').replace('```', '').strip()
-            result = await self.respond_core(code, file_type, plain, spoiler)
-            match result['status']:
-                case 0:
-                    embed = discord.Embed(color=0x008000)
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar.url,
-                    )
-                    if file_type == 'png':
-                        embed.set_image(url='attachment://tex.png')
-                    return await ctx.reply(
-                        file=discord.File(
-                            io.BytesIO(base64.b64decode(result['result'])),
-                            filename='tex.pdf' if file_type == 'pdf' else 'tex.png',
-                            spoiler=spoiler,
-                        ),
-                        embed=embed,
-                        view=view,
-                    )
-                case 1:
-                    embed = discord.Embed(
-                        title='Rendering Error',
-                        description=f'```\n{result["error"]}\n```',
-                        color=0xff0000,
-                    )
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar.url,
-                    )
-                    return await ctx.reply(embed=embed, view=view)
-                case 2:
-                    embed = discord.Embed(
-                        title='Timed Out',
-                        color=0xff0000,
-                    )
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar,
-                    )
-                    return await ctx.reply(embed=embed, view=view)
-                case _:
-                    embed = discord.Embed(
-                        title='Unhandled Error',
-                        color=0xff0000,
-                    )
-                    embed.set_author(
-                        name=ctx.author.name,
-                        icon_url=ctx.author.display_avatar.url,
-                    )
-                    return await ctx.reply(content=f'Please report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
+            content, embed, file = await respond_core(ctx, code, file_type, plain, spoiler)
+            m = await ctx.send(content=content, embed=embed, file=file, view=view)
+            return m
 
     @commands.command()
     async def tex(self, ctx: commands.Context, *, code: str):
@@ -122,6 +156,13 @@ class TeX(commands.Cog):
         """TeX to PDF (from preamble)"""
         m = await self.respond(ctx, code, 'pdf', None, False)
         self.user_message_id_to_bot_message[ctx.message.id] = m
+
+    @discord.slash_command(
+        name='tex',
+        description='TeX to image',
+    )
+    async def tex_slash(self, ctx: commands.Context, plain: bool = False, spoiler: bool = False):
+        await TeXModal(ctx, plain, spoiler).start()
 
 
 def setup(bot):
