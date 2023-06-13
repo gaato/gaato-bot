@@ -190,7 +190,7 @@ class ViewCodeButton(discord.ui.Button):
             text=f'Requested by {interaction.user.name}',
             icon_url=interaction.user.display_avatar.url,
         )
-        view = discord.ui.View(DeleteButton(interaction.user))
+        view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
         await interaction.response.send_message(embed=embed, view=view)
 
 
@@ -216,7 +216,7 @@ class RunModal(discord.ui.Modal):
     async def callback(self, interaction: Interaction):
         await interaction.response.defer(invisible=False)
         embed, files = await run_core(interaction.user, self.language, self.children[0].value, self.children[1].value)
-        view = discord.ui.View(DeleteButton(interaction.user), EditButton(), ViewCodeButton())
+        view = discord.ui.View(DeleteButton(interaction.user), EditButton(), ViewCodeButton(), timeout=None)
         m = await interaction.followup.send(embed=embed, files=files, view=view, wait=True)
         c.execute('INSERT INTO code VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.language, self.children[0].value, self.children[1].value))
 
@@ -235,7 +235,7 @@ class Code(commands.Cog):
     @commands.command()
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
-        view = discord.ui.View(DeleteButton(ctx.author))
+        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         embed, files = await run_core(ctx, language, code)
         m = await ctx.reply(embed=embed, files=files, view=view)
         self.user_message_id_to_bot_message[ctx.message.id] = m

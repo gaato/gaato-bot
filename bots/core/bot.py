@@ -48,7 +48,7 @@ class Bot(commands.Bot):
         if isinstance(exception, commands.CommandNotFound):
             return
         if isinstance(exception, commands.UserInputError):
-            view = discord.ui.View(DeleteButton(ctx.author))
+            view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
             embed = discord.Embed(
                 title='Invalid Input',
                 description=f'```\n{exception}\n```',
@@ -60,7 +60,7 @@ class Bot(commands.Bot):
             )
             await ctx.reply(embed=embed, view=view)
             return
-        view = discord.ui.View(DeleteButton(ctx.author))
+        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         embed = discord.Embed(
             title='Unhandled Error',
             color=0xff0000,

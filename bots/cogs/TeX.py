@@ -132,7 +132,7 @@ class TeXModal(discord.ui.Modal):
             self.plain,
             self.spoiler,
         )
-        view = discord.ui.View(DeleteButton(interaction.user), EditButton())
+        view = discord.ui.View(DeleteButton(interaction.user), EditButton(), timeout=None)
         if file is None:
             m = await interaction.followup.send(content=content, embed=embed, view=view, wait=True)
         else:
@@ -155,7 +155,7 @@ class TeX(commands.Cog):
 
     async def respond(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
         async with ctx.channel.typing():
-            view = discord.ui.View(DeleteButton(ctx.author))
+            view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
             code = code.replace('```tex', '').replace('```', '').strip()
             content, embed, file = await respond_core(ctx.author, code, file_type, plain, spoiler)
             if file is None:

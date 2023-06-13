@@ -21,7 +21,7 @@ class Misc(commands.Cog):
         outputs = [f'{text}']
         for t in tokens:
             outputs.append(f'{t.surface()}\t{",".join(t.part_of_speech())}\t{t.reading_form()}\t{t.normalized_form()}')
-        view = discord.ui.View(DeleteButton(ctx.author))
+        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         await ctx.respond(f'```\n' + '\n'.join(outputs) + '\n```', view=view)
 
 

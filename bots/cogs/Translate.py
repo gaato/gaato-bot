@@ -118,7 +118,7 @@ class Translate(commands.Cog):
             name=ctx.author.display_name,
             icon_url=ctx.author.display_avatar.url,
         )
-        view = discord.ui.View(DeleteButton(ctx.author))
+        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         await ctx.respond(embed=embed, view=view)
 
 
