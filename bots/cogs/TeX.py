@@ -22,14 +22,7 @@ class TeX(commands.Cog):
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
-    async def respond(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
-
-        async with ctx.channel.typing():
-
-            view = discord.ui.View(DeleteButton(self.bot))
-
-            code = code.replace('```tex', '').replace('```', '').strip()
-
+    async def respond_core(self, code: str, file_type: str, plain: Optional[bool], spoiler: bool) -> dict:
             url = 'http://127.0.0.1:9000/api'
             params = {
                 'type': file_type,
@@ -41,17 +34,15 @@ class TeX(commands.Cog):
                     if r.status == 200:
                         result = await r.json()
                     else:
-                        embed = discord.Embed(
-                            title='Connection Error',
-                            description=f'{r.status}',
-                            color=0xff0000,
-                        )
-                        embed.set_author(
-                            name=ctx.author.name,
-                            icon_url=ctx.author.display_avatar.url,
-                        )
-                        return await ctx.reply(content=f'Please Report us!\n{SUPPORT_SERVER_LINK}', embed=embed, view=view)
+                        raise Exception(
+                            f'Failed to connect to {url} (status: {r.status})')
+            return result
 
+    async def respond(self, ctx: commands.Context, code: str, file_type: str, plain: Optional[bool], spoiler: bool):
+        async with ctx.channel.typing():
+            view = discord.ui.View(DeleteButton(self.bot))
+            code = code.replace('```tex', '').replace('```', '').strip()
+            result = await self.respond_core(code, file_type, plain, spoiler)
             match result['status']:
                 case 0:
                     embed = discord.Embed(color=0x008000)
