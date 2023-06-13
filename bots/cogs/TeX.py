@@ -1,17 +1,26 @@
 import base64
 import io
+import pathlib
+import sqlite3
 from collections import OrderedDict
-from typing import Optional, Union, Tuple
+from typing import Optional, Tuple, Union
 
 import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK, OldDeleteButton, LimitedSizeDict
+from .. import SUPPORT_SERVER_LINK, LimitedSizeDict, OldDeleteButton
+
+
+BASE_DIR = pathlib.Path(__file__).parent.parent
+dbname = BASE_DIR.parent / 'db.sqlite3'
+conn = sqlite3.connect(dbname, check_same_thread=False)
+c = conn.cursor()
+c.execute('CREATE TABLE IF NOT EXISTS tex (message_id INTEGER, author_id INTEGER, code TEXT, plain INTEGER, spoiler INTEGER)')
 
 
 async def respond_core(
-    ctx: Union[discord.ApplicationContext, commands.Context],
+    author: discord.User,
     code: str, file_type: str,
     plain: Optional[bool],
     spoiler: bool
@@ -33,16 +42,16 @@ async def respond_core(
                     color=0xff0000,
                 )
                 embed.set_author(
-                    name=ctx.author.name,
-                    icon_url=ctx.author.display_avatar.url,
+                    name=author.name,
+                    icon_url=author.display_avatar.url,
                 )
                 return '', embed, None
     match result['status']:
         case 0:
             embed = discord.Embed(color=0x008000)
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
+                name=author.name,
+                icon_url=author.display_avatar.url,
             )
             if file_type == 'png':
                 embed.set_image(url='attachment://tex.png')
@@ -59,8 +68,8 @@ async def respond_core(
                 color=0xff0000,
             )
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
+                name=author.name,
+                icon_url=author.display_avatar.url,
             )
             return '', embed, None
         case 2:
@@ -69,8 +78,8 @@ async def respond_core(
                 color=0xff0000,
             )
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar,
+                name=author.name,
+                icon_url=author.display_avatar,
             )
             return '', embed, None
         case _:
@@ -79,35 +88,98 @@ async def respond_core(
                 color=0xff0000,
             )
             embed.set_author(
-                name=ctx.author.name,
-                icon_url=ctx.author.display_avatar.url,
+                name=author.name,
+                icon_url=author.display_avatar.url,
             )
             return f'Please report us!\n{SUPPORT_SERVER_LINK}', embed, None
 
 
+class DeleteButton(discord.ui.Button):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM tex WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        if result[1] != interaction.user.id:
+            embed = discord.Embed(
+                title='Error',
+                description='You are not the author.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        await interaction.message.delete()
+        c.execute('DELETE FROM tex WHERE message_id = ?', (interaction.message.id,))
+
+
+class EditButton(discord.ui.Button):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def callback(self, interaction: discord.Interaction):
+        c = conn.cursor()
+        c.execute('SELECT * FROM tex WHERE message_id = ?', (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title='Error',
+                description='Not found.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        if result[1] != interaction.user.id:
+            embed = discord.Embed(
+                title='Error',
+                description='You are not the author.',
+                color=0xff0000
+            )
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
+        c.execute('DELETE FROM tex WHERE message_id = ?', (interaction.message.id,))
+        await interaction.response.send_modal(TeXModal(bool(result[3]), bool(result[4]), result[2], deleted_message=interaction.message))
+
+
 class TeXModal(discord.ui.Modal):
-    def __init__(self, ctx: discord.ApplicationContext, plain, spoiler, *arg, **kwargs):
-        self.ctx = ctx
+    def __init__(self, plain, spoiler, value='', title='LaTeX to Image', deleted_message=None, *arg, **kwargs):
         self.plain = plain
         self.spoiler = spoiler
-        super().__init__(*arg, **kwargs)
+        self.deleted_message = deleted_message
+        super().__init__(title=title, *arg, **kwargs)
         self.add_item(discord.ui.InputText(
             label = 'Text' if plain else 'Code',
             placeholder='Input TeX code here',
             style=discord.InputTextStyle.long,
+            value=value,
         ))
 
     async def callback(self, interaction: discord.Interaction):
         await interaction.response.defer(invisible=False)
         content, embed, file = await respond_core(
-            self.ctx,
+            interaction.user,
             self.children[0].value,
             'png',
             self.plain,
             self.spoiler,
         )
-        print(content, embed, file)
-        await interaction.followup.send(content=content, embed=embed, file=file)
+        view = discord.ui.View(DeleteButton(label='Delete', style=discord.ButtonStyle.danger), EditButton(label='Edit', style=discord.ButtonStyle.primary))
+        m = await interaction.followup.send(content=content, embed=embed, file=file, view=view, wait=True)
+        c = conn.cursor()
+        c.execute('INSERT INTO tex VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.children[0].value, int(self.plain), int(self.spoiler)))
+        if self.deleted_message is not None:
+            await self.deleted_message.delete()
+            c.execute('DELETE FROM tex WHERE message_id = ?', (self.deleted_message.id,))
+
 
 class TeX(commands.Cog):
 
@@ -125,7 +197,7 @@ class TeX(commands.Cog):
         async with ctx.channel.typing():
             view = discord.ui.View(OldDeleteButton(self.bot))
             code = code.replace('```tex', '').replace('```', '').strip()
-            content, embed, file = await respond_core(ctx, code, file_type, plain, spoiler)
+            content, embed, file = await respond_core(ctx.author, code, file_type, plain, spoiler)
             m = await ctx.send(content=content, embed=embed, file=file, view=view)
             return m
 
@@ -164,7 +236,7 @@ class TeX(commands.Cog):
         description='TeX to image',
     )
     async def tex_slash(self, ctx: discord.ApplicationContext, plain: bool = False, spoiler: bool = False):
-        modal = TeXModal(ctx, plain, spoiler, title='LaTeX to Image')
+        modal = TeXModal(plain, spoiler)
         await ctx.send_modal(modal)
 
 
