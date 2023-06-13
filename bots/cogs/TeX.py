@@ -47,7 +47,7 @@ async def respond_core(
                 if file_type == 'png':
                     embed.set_image(url='attachment://tex.png')
                 file = discord.File(
-                    io.BytesIO(base64.b64decode(result['data'])),
+                    io.BytesIO(base64.b64decode(result['result'])),
                     filename='tex.png',
                     spoiler=spoiler,
                 )
