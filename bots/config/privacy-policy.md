@@ -2,23 +2,29 @@
 
 ## Owner
 
-Gakuto Furuya (gaato#0629)
+Gakuto Furuya (gaato.)
 
-## Bots
+## Bot
 
 - **CodeRunBot**#4348
-- **がーとぼっと**#6587
 
 ## What data we collect
 
 - Message content of the channel where the bot can be seen
+- Internal error logs (not related to the user)
 
 ## How we use it
+
+### Message content
 
 - The bot uses to determine if a command is being called.
 - If so, the bot use it to create a response.
 
 It is not used for any other purpose and is discarded immediately.
+
+### Internal error logs
+
+- For debugging purposes.
 
 ## How to opt-out of providing us that data
 
