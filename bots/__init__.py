@@ -2,7 +2,9 @@ from collections import OrderedDict
 
 import discord
 
-SUPPORT_SERVER_LINK = 'https://discord.gg/qRpYRTgvXM'
+SUPPORT_SERVER_LINK = 'discord.gg/qRpYRTgvXM'
+LOG_CHANNEL_ID = 1118867011448078417
+DEVELOPER_ID = 572432137035317249
 
 
 class DeleteButton(discord.ui.Button):
