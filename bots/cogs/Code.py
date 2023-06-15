@@ -236,7 +236,7 @@ class Code(commands.Cog):
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
         view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
-        embed, files = await run_core(ctx, language, code)
+        embed, files = await run_core(ctx.author, language, code)
         m = await ctx.reply(embed=embed, files=files, view=view)
         self.user_message_id_to_bot_message[ctx.message.id] = m
 
