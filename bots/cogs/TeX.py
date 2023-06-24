@@ -159,9 +159,9 @@ class TeX(commands.Cog):
             code = code.replace('```tex', '').replace('```', '').strip()
             content, embed, file = await respond_core(ctx.author, code, file_type, plain, spoiler)
             if file is None:
-                m = await ctx.send(content=content, embed=embed, view=view)
+                m = await ctx.reply(content=content, embed=embed, view=view)
             else:
-                m = await ctx.send(content=content, embed=embed, file=file, view=view)
+                m = await ctx.reply(content=content, embed=embed, file=file, view=view)
             return m
 
     @commands.command()
