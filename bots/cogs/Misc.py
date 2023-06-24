@@ -29,7 +29,7 @@ class Misc(commands.Cog):
         if message.channel.id not in pins:
             return
         last_message = discord.utils.find(
-            lambda m: len(m.embeds) > 0 and m.embeds[0].footer.text.startswith('Pinned in'),
+            lambda m: len(m.embeds) > 0 and m.embeds[0].footer.text.startswith('Pinned'),
             await message.channel.history(limit=10).flatten(),
         )
         if last_message is not None:
@@ -38,15 +38,11 @@ class Misc(commands.Cog):
         if pinned_message is None:
             return
         embed = discord.Embed()
-        embed.set_author(
-            name=pinned_message.author.display_name,
+        embed.set_footer(
+            text=f'Pinned by {pinned_message.author.display_name}',
             icon_url=pinned_message.author.display_avatar.url,
         )
-        embed.description = pinned_message.content
-        embed.set_footer(
-            text=f'Pinned in #{message.channel.name}',
-        )
-        await message.channel.send(embed=embed)
+        await message.channel.send(content=pinned_message.content, embed=embed)
 
     @discord.slash_command(
         name='sudachi',
