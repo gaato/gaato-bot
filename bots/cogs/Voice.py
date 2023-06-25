@@ -205,10 +205,6 @@ class Voice(commands.Cog):
     @commands.command()
     async def join(self, ctx: commands.Context):
         """VC に参加"""
-        await ctx.reply(
-            '現在モバイル版 Discord で bot の音量調節，ミュートができないため，音楽機能は一時的に使用不可能にしています．'
-        )
-        return
         if not ctx.author.voice or not ctx.author.voice.channel:
             return await ctx.send('先にボイスチャンネルに参加してください')
         vc = await ctx.author.voice.channel.connect()
@@ -217,10 +213,6 @@ class Voice(commands.Cog):
     @commands.command(aliases=['p'])
     async def play(self, ctx: commands.Context, *, url_or_keyword: str):
         """音楽を再生"""
-        await ctx.reply(
-            '現在モバイル版 Discord で bot の音量調節，ミュートができないため，音楽機能は一時的に使用不可能にしています．'
-        )
-        return
         status = self.audio_statuses.get(ctx.guild.id)
         if status is None or status.vc is None or not status.vc.is_connected:
             await ctx.invoke(self.join)
