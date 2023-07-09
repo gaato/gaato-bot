@@ -45,7 +45,7 @@ class ShuYoJo(commands.Cog):
                 label='クリップボードにコピー',
                 style=discord.ButtonStyle.primary,
                 emoji='📋',
-                url=f'https://pythonbot.fly.dev/u/600922778509770754?text={urllib.parse.quote(copyable_text)}',
+                url=f'https://gaato.net/data/copy.html?text={urllib.parse.quote(copyable_text)}',
             ))
         else:
             view = None
