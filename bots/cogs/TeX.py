@@ -34,7 +34,7 @@ async def respond_core(
                 embed.set_author(name=author.name, icon_url=author.display_avatar.url)
                 if not spoiler:
                     embed.set_image(url='attachment://tex.png')
-                if '\\\\' in code:
+                if '\\\\' in code and '\\begin' not in code and '\\end' not in code:
                     embed.add_field(name='Hint', value='You can use gather or align environment.')
                 return '', embed, file
             else:
