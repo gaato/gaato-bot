@@ -14,7 +14,7 @@ BASE_DIR = pathlib.Path(__file__).parent.parent
 dbname = BASE_DIR.parent / 'db.sqlite3'
 conn = sqlite3.connect(dbname, check_same_thread=False)
 c = conn.cursor()
-c.execute('CREATE TABLE IF NOT EXISTS tex (message_id INTEGER, author_id INTEGER, code TEXT, plain INTEGER, spoiler INTEGER)')
+c.execute('CREATE TABLE IF NOT EXISTS tex (message_id INTEGER, author_id INTEGER, code TEXT, spoiler INTEGER)')
 
 
 async def respond_core(
@@ -91,7 +91,7 @@ class TeXModal(discord.ui.Modal):
         else:
             m = await interaction.followup.send(content=content, embed=embed, file=file, view=view, wait=True)
         c = conn.cursor()
-        c.execute('INSERT INTO tex VALUES (?, ?, ?, ?, ?)', (m.id, interaction.user.id, self.children[0].value, int(self.plain), int(self.spoiler)))
+        c.execute('INSERT INTO tex VALUES (?, ?, ?, ?)', (m.id, interaction.user.id, self.children[0].value, int(self.spoiler)))
 
 
 class TeX(commands.Cog):
