@@ -1,7 +1,6 @@
 py-cord[voice]==2.4.1
 aiohttp
 python-dotenv
-yt-dlp>=2023.02.17
 google-auth-oauthlib
 google-api-python-client
 sudachipy
