@@ -8,7 +8,7 @@ It can run codes and render LaTeX.
 
 ### gaato bot
 
-This is a bot for internal use that adds music playback and other functions to CodeRunBot. Also, this is for Japanese speakers.
+This is a bot for internal use that adds other functions to CodeRunBot. Also, this is for Japanese speakers.
 
 ## Links
 

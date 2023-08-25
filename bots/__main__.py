@@ -11,7 +11,7 @@ CODERUNBOT_TOKEN = os.environ.get('CODERUNBOT_TOKEN')
 GAATO_BOT_TOKEN = os.environ.get('GAATO_BOT_TOKEN')
 
 CODERUNBOT_COGS = ['bots.cogs.TeX', 'bots.cogs.Code', 'bots.cogs.Privacy']
-GAATO_BOT_COGS = ['bots.cogs.Voice', 'bots.cogs.TeX', 'bots.cogs.Code', 'bots.cogs.Privacy', 'bots.cogs.Wolfram', 'bots.cogs.Misc', 'bots.cogs.Translate', 'bots.cogs.ShuYoJo']
+GAATO_BOT_COGS = ['bots.cogs.TeX', 'bots.cogs.Code', 'bots.cogs.Privacy', 'bots.cogs.Wolfram', 'bots.cogs.Misc', 'bots.cogs.Translate', 'bots.cogs.ShuYoJo']
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-g', '--gaato-bot',
