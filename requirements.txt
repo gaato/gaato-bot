@@ -17,8 +17,7 @@ attrs==21.4.0
 cachetools==5.0.0
     # via google-auth
 certifi==2023.7.22
-    # via
-    #   requests
+    # via requests
 cffi==1.15.0
     # via pynacl
 charset-normalizer==2.0.12
@@ -97,6 +96,8 @@ sudachipy==0.6.7
     # via
     #   -r requirements.in
     #   sudachidict-core
+typing-extensions==4.7.1
+    # via py-cord
 uritemplate==4.1.1
     # via google-api-python-client
 urllib3==1.26.9
