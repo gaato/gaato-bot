@@ -34,6 +34,8 @@ async def respond_core(
                 embed.set_author(name=author.name, icon_url=author.display_avatar.url)
                 if not spoiler:
                     embed.set_image(url='attachment://tex.png')
+                if '\\\\' in code:
+                    embed.add_field(name='Hint', value='You can use gather or align environment.')
                 return '', embed, file
             else:
                 error_message = await r.text()
@@ -47,6 +49,7 @@ async def respond_core(
                     icon_url=author.display_avatar.url,
                 )
                 return '', embed, None
+
 
 class EditButton(discord.ui.Button):
     def __init__(self, label='Edit', style=discord.ButtonStyle.primary, **kwargs):
