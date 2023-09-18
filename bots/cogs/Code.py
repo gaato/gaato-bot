@@ -156,42 +156,42 @@ class EditButton(discord.ui.Button):
         )
 
 
-class ViewCodeButton(discord.ui.Button):
-    def __init__(
-        self, label="View Code", style=discord.ButtonStyle.secondary, **kwargs
-    ):
-        super().__init__(label=label, style=style, **kwargs)
+# class ViewCodeButton(discord.ui.Button):
+#     def __init__(
+#         self, label="View Code", style=discord.ButtonStyle.secondary, **kwargs
+#     ):
+#         super().__init__(label=label, style=style, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction):
-        c = conn.cursor()
-        c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
-        result = c.fetchone()
-        if result is None:
-            embed = discord.Embed(
-                title="Error", description="Not found.", color=0xFF0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        embed = discord.Embed(
-            title=result[2],
-            description=f"```{result[2]}\n{result[3]}```",
-            color=0x007000,
-        )
-        if result[4] != "":
-            embed.add_field(
-                name="Standard Input",
-                value=f"```\n{result[4]}\n```",
-            )
-        embed.set_author(
-            name=interaction.guild.get_member(result[1]).name,
-            icon_url=interaction.guild.get_member(result[1]).display_avatar.url,
-        )
-        embed.set_footer(
-            text=f"Requested by {interaction.user.name}",
-            icon_url=interaction.user.display_avatar.url,
-        )
-        view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
-        await interaction.response.send_message(embed=embed, view=view)
+#     async def callback(self, interaction: discord.Interaction):
+#         c = conn.cursor()
+#         c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
+#         result = c.fetchone()
+#         if result is None:
+#             embed = discord.Embed(
+#                 title="Error", description="Not found.", color=0xFF0000
+#             )
+#             await interaction.response.send_message(embed=embed, ephemeral=True)
+#             return
+#         embed = discord.Embed(
+#             title=result[2],
+#             description=f"```{result[2]}\n{result[3]}```",
+#             color=0x007000,
+#         )
+#         if result[4] != "":
+#             embed.add_field(
+#                 name="Standard Input",
+#                 value=f"```\n{result[4]}\n```",
+#             )
+#         embed.set_author(
+#             name=interaction.guild.get_member(result[1]).name,
+#             icon_url=interaction.guild.get_member(result[1]).display_avatar.url,
+#         )
+#         embed.set_footer(
+#             text=f"Requested by {interaction.user.name}",
+#             icon_url=interaction.user.display_avatar.url,
+#         )
+#         view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
+#         await interaction.response.send_message(embed=embed, view=view)
 
 
 class RunModal(discord.ui.Modal):
@@ -230,8 +230,12 @@ class RunModal(discord.ui.Modal):
             self.children[0].value,
             self.children[1].value,
         )
+        embed.add_field(
+            name="Code",
+            value=f"```{self.language}\n{self.children[0].value}\n```",
+        )
         view = discord.ui.View(
-            DeleteButton(interaction.user), EditButton(), ViewCodeButton(), timeout=None
+            DeleteButton(interaction.user), EditButton(), timeout=None
         )
         m = await interaction.followup.send(
             embed=embed, files=files, view=view, wait=True
