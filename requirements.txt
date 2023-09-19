@@ -7,6 +7,7 @@
 aiohttp==3.8.1
     # via
     #   -r requirements.in
+    #   openai
     #   py-cord
 aiosignal==1.2.0
     # via aiohttp
@@ -58,6 +59,8 @@ multidict==6.0.2
     #   yarl
 oauthlib==3.2.0
     # via requests-oauthlib
+openai==0.28.0
+    # via -r requirements.in
 protobuf==3.19.4
     # via
     #   google-api-core
@@ -81,6 +84,7 @@ python-dotenv==0.19.2
 requests==2.27.1
     # via
     #   google-api-core
+    #   openai
     #   requests-oauthlib
 requests-oauthlib==1.3.1
     # via google-auth-oauthlib
@@ -96,6 +100,8 @@ sudachipy==0.6.7
     # via
     #   -r requirements.in
     #   sudachidict-core
+tqdm==4.66.1
+    # via openai
 typing-extensions==4.7.1
     # via py-cord
 uritemplate==4.1.1
