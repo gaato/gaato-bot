@@ -177,7 +177,7 @@ class AIButton(discord.ui.Button):
                     m.id,
                     interaction.user.id,
                     fixed_formula,
-                    int(result[3]),
+                    int(result[4]),
                     None,
                 ),
             )
