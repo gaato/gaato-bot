@@ -3,7 +3,7 @@ import os
 import pathlib
 import sqlite3
 import time
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
 
 import aiohttp
 import discord
@@ -258,8 +258,13 @@ class TeX(commands.Cog):
             if before.id in self.user_message_id_to_bot_message:
                 await self.user_message_id_to_bot_message[before.id].delete()
 
-    async def respond(self, ctx: commands.Context, code: str, spoiler: bool):
-        async with ctx.channel.typing():
+    async def respond(
+        self,
+        ctx: Union[commands.Context, discord.ApplicationContext],
+        code: str,
+        spoiler: bool,
+    ):
+        async with ctx.typing():
             code = code.replace("```tex", "").replace("```", "").strip()
             content, embed, file, error = await respond_core(ctx.author, code, spoiler)
             if error is None:
@@ -270,13 +275,36 @@ class TeX(commands.Cog):
                 )
             c = conn.cursor()
             if file is None:
-                m = await ctx.reply(content=content, embed=embed, view=view)
+                if isinstance(ctx, discord.ApplicationContext):
+                    m = await ctx.respond(content=content, embed=embed, view=view)
+                else:
+                    m = await ctx.reply(content=content, embed=embed, view=view)
             else:
-                m = await ctx.reply(content=content, embed=embed, file=file, view=view)
-            c.execute(
-                "INSERT INTO tex VALUES (?, ?, ?, ?, ?, ?)",
-                (ctx.message.id, m.id, ctx.author.id, code, int(spoiler), error),
-            )
+                if isinstance(ctx, discord.ApplicationContext):
+                    m = await ctx.respond(
+                        content=content, embed=embed, file=file, view=view
+                    )
+                else:
+                    m = await ctx.reply(
+                        content=content, embed=embed, file=file, view=view
+                    )
+            if isinstance(ctx, discord.ApplicationContext):
+                c.execute(
+                    "INSERT INTO tex VALUES (?, ?, ?, ?, ?, ?)",
+                    (
+                        m.id,
+                        m.id,
+                        ctx.author.id,
+                        code,
+                        int(spoiler),
+                        error,
+                    ),
+                )
+            else:
+                c.execute(
+                    "INSERT INTO tex VALUES (?, ?, ?, ?, ?, ?)",
+                    (ctx.message.id, m.id, ctx.author.id, code, int(spoiler), error),
+                )
             return m
 
     @commands.command()
@@ -285,34 +313,44 @@ class TeX(commands.Cog):
         m = await self.respond(ctx, code, False)
         self.user_message_id_to_bot_message[ctx.message.id] = m
 
-    # @commands.command()
-    # async def texp(self, ctx: commands.Context, *, code: str):
-    #     """LaTeX to image (out of math mode)"""
-    #     m = await self.respond(ctx, code, 'png', True, False)
-    #     self.user_message_id_to_bot_message[ctx.message.id] = m
-
     @commands.command()
     async def stex(self, ctx: commands.Context, *, code: str):
         """LaTeX to spoiler image (in math mode)"""
         m = await self.respond(ctx, code, True)
         self.user_message_id_to_bot_message[ctx.message.id] = m
 
-    # @commands.command()
-    # async def stexp(self, ctx: commands.Context, *, code: str):
-    #     """LaTeX to spoiler image (out of math mode)"""
-    #     m = await self.respond(ctx, code, 'png', True, True)
-    #     self.user_message_id_to_bot_message[ctx.message.id] = m
-
-    # @commands.command()
-    # async def texpdf(self, ctx: commands.Context, *, code: str):
-    #     """LaTeX to PDF (from preamble)"""
-    #     m = await self.respond(ctx, code, 'pdf', None, False)
-    #     self.user_message_id_to_bot_message[ctx.message.id] = m
+    @commands.command()
+    async def aitex(self, ctx: commands.Context, *, code: str):
+        """LaTeX to image (in math mode)"""
+        with ctx.typing():
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "Convert to LaTeX formulae.\n"
+                        "Response only LaTeX formulae without any other text.\n"
+                        "Don't include $ or \\[ or \\] in the response.",
+                    },
+                    {"role": "user", "content": code},
+                ],
+                max_tokens=50,
+            )
+        m = await self.respond(
+            ctx, response["choices"][0]["message"]["content"].strip(), False
+        )
+        self.user_message_id_to_bot_message[ctx.message.id] = m
 
     @discord.slash_command(
         name="tex",
         description="TeX to image",
         options=[
+            discord.Option(
+                type=str,
+                name="code",
+                description="LaTeX code",
+                required=False,
+            ),
             discord.Option(
                 type=str,
                 name="env",
@@ -335,12 +373,58 @@ class TeX(commands.Cog):
     async def tex_slash(
         self,
         ctx: discord.ApplicationContext,
+        code: Optional[str] = None,
         env: Optional[str] = None,
         spoiler: bool = False,
     ):
-        # modal = TeXModal(plain, spoiler)
-        modal = TeXModal(spoiler, env)
-        await ctx.send_modal(modal)
+        if code is None:
+            modal = TeXModal(spoiler, env)
+            await ctx.send_modal(modal)
+        else:
+            await self.respond(ctx, code, spoiler)
+
+    @discord.slash_command(
+        name="aitex",
+        description="text to LaTeX image with AI",
+        options=[
+            discord.Option(
+                type=str,
+                name="text",
+                description="Text to convert to LaTeX formulae",
+                required=True,
+            ),
+            discord.Option(
+                type=bool,
+                name="spoiler",
+                description="Whether to mark the image as a spoiler",
+                required=False,
+                default=False,
+            ),
+        ],
+    )
+    async def aitex_slash(
+        self,
+        ctx: discord.ApplicationContext,
+        text: str,
+        spoiler: bool = False,
+    ):
+        await ctx.defer()
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Convert to LaTeX formulae.\n"
+                    "Response only LaTeX formulae without any other text.\n"
+                    "Don't include $ or \\[ or \\] in the response.",
+                },
+                {"role": "user", "content": text},
+            ],
+            max_tokens=50,
+        )
+        await self.respond(
+            ctx, response["choices"][0]["message"]["content"].strip(), spoiler
+        )
 
 
 def setup(bot):
