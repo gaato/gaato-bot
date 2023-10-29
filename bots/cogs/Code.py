@@ -1,4 +1,5 @@
 import io
+import os
 import pathlib
 import re
 import sqlite3
@@ -6,9 +7,11 @@ from typing import List, Optional, Tuple
 
 import aiohttp
 import discord
+import openai
 import requests
 from discord.ext import commands
 from discord.interactions import Interaction
+from iso639 import Lang
 
 from .. import DeleteButton, LimitedSizeDict
 
@@ -22,6 +25,8 @@ c = conn.cursor()
 c.execute(
     "CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)"
 )
+
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def get_autocomplete_languages() -> List[str]:
@@ -156,42 +161,60 @@ class EditButton(discord.ui.Button):
         )
 
 
-# class ViewCodeButton(discord.ui.Button):
-#     def __init__(
-#         self, label="View Code", style=discord.ButtonStyle.secondary, **kwargs
-#     ):
-#         super().__init__(label=label, style=style, **kwargs)
+class ExplainButton(discord.ui.Button):
+    def __init__(
+        self, label="Explain Error by AI", style=discord.ButtonStyle.primary, **kwargs
+    ):
+        super().__init__(label=label, style=style, **kwargs)
 
-#     async def callback(self, interaction: discord.Interaction):
-#         c = conn.cursor()
-#         c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
-#         result = c.fetchone()
-#         if result is None:
-#             embed = discord.Embed(
-#                 title="Error", description="Not found.", color=0xFF0000
-#             )
-#             await interaction.response.send_message(embed=embed, ephemeral=True)
-#             return
-#         embed = discord.Embed(
-#             title=result[2],
-#             description=f"```{result[2]}\n{result[3]}```",
-#             color=0x007000,
-#         )
-#         if result[4] != "":
-#             embed.add_field(
-#                 name="Standard Input",
-#                 value=f"```\n{result[4]}\n```",
-#             )
-#         embed.set_author(
-#             name=interaction.guild.get_member(result[1]).name,
-#             icon_url=interaction.guild.get_member(result[1]).display_avatar.url,
-#         )
-#         embed.set_footer(
-#             text=f"Requested by {interaction.user.name}",
-#             icon_url=interaction.user.display_avatar.url,
-#         )
-#         view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
-#         await interaction.response.send_message(embed=embed, view=view)
+    async def callback(self, interaction: discord.Interaction):
+        await interaction.response.defer(invisible=False)
+        compiler_error = program_error = ""
+        for field in interaction.message.embeds[0].fields:
+            if field.name == "compiler_error":
+                compiler_error = field.value
+            elif field.name == "program_error":
+                program_error = field.value
+        if compiler_error == "" and program_error == "":
+            embed = discord.Embed(
+                title="Error",
+                description="There is no error.",
+                color=0xFF0000,
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+        locale = interaction.locale
+        c = conn.cursor()
+        c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
+        result = c.fetchone()
+        if result is None:
+            embed = discord.Embed(
+                title="Error", description="Not found.", color=0xFF0000
+            )
+            await interaction.followup.send(embed=embed, ephemeral=True)
+            return
+        response = openai.ChatCompletion.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": f"Explain the error in {Lang(locale).name}\n"
+                    "You can use Markdown syntax",
+                },
+                {"role": "user", "content": f"Language:\n{result[2]}"},
+                {"role": "user", "content": f"Code:\n{result[3]}"},
+                {
+                    "role": "user",
+                    "content": "Error:\n" + "{compiler_error}\n{program_error}".strip(),
+                },
+            ],
+            max_tokens=1000,
+        )
+        embed = discord.Embed(
+            title="Explanation by AI",
+            description=response["choices"][0]["message"]["content"].strip(),
+        )
+        await interaction.followup.send(embed=embed)
 
 
 class RunModal(discord.ui.Modal):
@@ -234,9 +257,22 @@ class RunModal(discord.ui.Modal):
             name="Code",
             value=f"```{self.language}\n{self.children[0].value}\n```",
         )
-        view = discord.ui.View(
-            DeleteButton(interaction.user), EditButton(), timeout=None
-        )
+        is_error = False
+        for field in embed.fields:
+            if field.name in ("compiler_error", "program_error"):
+                is_error = True
+                break
+        if is_error:
+            view = discord.ui.View(
+                DeleteButton(interaction.user),
+                EditButton(),
+                ExplainButton(),
+                timeout=None,
+            )
+        else:
+            view = discord.ui.View(
+                DeleteButton(interaction.user), EditButton(), timeout=None
+            )
         m = await interaction.followup.send(
             embed=embed, files=files, view=view, wait=True
         )
@@ -267,10 +303,32 @@ class Code(commands.Cog):
     async def run(self, ctx: commands.Context, language: str, *, code: str):
         """Run code"""
         code = re.sub(r"(```[a-zA-Z0-9]*\n|```)($|\n)", "", code)
-        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         embed, files = await run_core(ctx.author, language, code)
+        is_error = False
+        for field in embed.fields:
+            if field.name in ("compiler_error", "program_error"):
+                is_error = True
+                break
+        if is_error:
+            view = discord.ui.View(
+                DeleteButton(ctx.author),
+                ExplainButton(),
+                timeout=None,
+            )
+        else:
+            view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
         m = await ctx.reply(embed=embed, files=files, view=view)
         self.user_message_id_to_bot_message[ctx.message.id] = m
+        c.execute(
+            "INSERT INTO code VALUES (?, ?, ?, ?, ?)",
+            (
+                m.id,
+                ctx.author.id,
+                language,
+                code,
+                "",
+            ),
+        )
 
     @discord.message_command()
     async def escape(self, ctx: discord.ApplicationContext, message: discord.Message):

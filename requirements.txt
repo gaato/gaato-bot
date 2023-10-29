@@ -53,6 +53,8 @@ idna==3.3
     # via
     #   requests
     #   yarl
+iso639-lang==2.1.0
+    # via -r requirements.in
 multidict==6.0.2
     # via
     #   aiohttp
