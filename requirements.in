@@ -5,3 +5,5 @@ google-auth-oauthlib
 google-api-python-client
 sudachipy
 sudachidict_core
+iso639-lang
+openai

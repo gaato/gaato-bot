@@ -2,13 +2,55 @@ import os
 
 import discord
 import dotenv
-import openai
+import iso639
 from discord.ext import commands
+from iso639.exceptions import InvalidLanguageValue
+from openai import AsyncOpenAI
 
 from .. import DeleteButton
 
 dotenv.load_dotenv(verbose=True)
-openai.api_key = os.getenv("OPENAI_API_KEY")
+
+
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+two_letter_codes: dict[str, list[str]] = {}
+three_letter_codes: dict[str, list[str]] = {}
+language_names: list[str] = []
+for lang in iso639.iter_langs():
+    if not (lang.pt1 or lang.pt2b or lang.pt2t):
+        continue
+    if lang.pt1:
+        if lang.pt1 in two_letter_codes:
+            two_letter_codes[lang.pt1].append(lang.name)
+        else:
+            two_letter_codes[lang.pt1] = [lang.name]
+    if lang.pt2b:
+        if lang.pt2b in three_letter_codes:
+            three_letter_codes[lang.pt2b].append(lang.name)
+        else:
+            three_letter_codes[lang.pt2b] = [lang.name]
+    if lang.pt2t:
+        if lang.pt2t in three_letter_codes:
+            three_letter_codes[lang.pt2t].append(lang.name)
+        else:
+            three_letter_codes[lang.pt2t] = [lang.name]
+    language_names.append(f"{lang.name}")
+
+
+def autocomplete_language(ctx: discord.AutocompleteContext) -> list[str]:
+    input_value = ctx.value.lower()
+    if len(input_value) <= 1:
+        return []
+    elif len(input_value) == 2:
+        return two_letter_codes.get(input_value, [])
+    elif len(input_value) == 3:
+        return three_letter_codes.get(input_value, [])
+    else:
+        matching_languages = [
+            name for name in language_names if name.lower().startswith(input_value)
+        ]
+        return sorted(matching_languages, key=len)[:30]
 
 
 class Translate(commands.Cog):
@@ -36,32 +78,28 @@ class Translate(commands.Cog):
                 description_localizaitons={
                     "ja_JP": "翻訳先の言語",
                 },
+                autocomplete=autocomplete_language,
                 required=True,
-            ),
-            discord.Option(
-                name="from",
-                description="Language to translate from",
-                description_localizaitons={
-                    "ja_JP": "翻訳元の言語",
-                },
-                required=False,
             ),
         ],
     )
-    async def translate(
-        self, ctx: discord.ApplicationContext, text: str, to: str, from_: str = None
-    ):
+    async def translate(self, ctx: discord.ApplicationContext, text: str, to: str):
         """Translate text"""
-        await ctx.defer()
-        response = openai.ChatCompletion.create(
+        await ctx.defer(ephemeral=True)
+        try:
+            lang = iso639.Lang(to)
+        except InvalidLanguageValue:
+            return await ctx.followup.send("Invalid language", ephemeral=True)
+        if not (lang.pt1 or lang.pt2b or lang.pt2t):
+            return await ctx.followup.send("Invalid language", ephemeral=True)
+        response = await client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {
                     "role": "system",
-                    "content": f"Respond translation of user's text to [{to}]"
-                    if not from_
-                    else f"translate user's text from [{from_}] to [{to}]"
-                    + "\nLanguage name or lanuage code must be in []",
+                    "content": "This is a direct translation task. "
+                    f"Translate the following text to {lang.name}. "
+                    "Do not add any additional comments or language indicators.",
                 },
                 {
                     "role": "user",
@@ -75,13 +113,13 @@ class Translate(commands.Cog):
             color=discord.Color.blurple(),
         )
         embed.add_field(
-            name=f"Original {from_ + ' text' if from_ else 'text'}",
+            name=f"Original text",
             value=text,
             inline=False,
         )
         embed.add_field(
             name=f"Translated to {to}",
-            value=response["choices"][0]["message"]["content"].strip(),
+            value=response.choices[0].message.content,
             inline=False,
         )
         view = discord.ui.View(DeleteButton(ctx.user))
