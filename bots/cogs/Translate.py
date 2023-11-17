@@ -85,7 +85,7 @@ class Translate(commands.Cog):
     )
     async def translate(self, ctx: discord.ApplicationContext, text: str, to: str):
         """Translate text"""
-        await ctx.defer(ephemeral=True)
+        await ctx.defer()
         try:
             lang = iso639.Lang(to)
         except InvalidLanguageValue:
