@@ -18,7 +18,7 @@ two_letter_codes: dict[str, list[str]] = {}
 three_letter_codes: dict[str, list[str]] = {}
 language_names: list[str] = []
 for lang in iso639.iter_langs():
-    if not (lang.pt1 or lang.pt2b or lang.pt2t):
+    if not lang.pt1:
         continue
     if lang.pt1:
         if lang.pt1 in two_letter_codes:
