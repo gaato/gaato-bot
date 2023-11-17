@@ -25,16 +25,6 @@ for lang in iso639.iter_langs():
             two_letter_codes[lang.pt1].append(lang.name)
         else:
             two_letter_codes[lang.pt1] = [lang.name]
-    if lang.pt2b:
-        if lang.pt2b in three_letter_codes:
-            three_letter_codes[lang.pt2b].append(lang.name)
-        else:
-            three_letter_codes[lang.pt2b] = [lang.name]
-    if lang.pt2t:
-        if lang.pt2t in three_letter_codes:
-            three_letter_codes[lang.pt2t].append(lang.name)
-        else:
-            three_letter_codes[lang.pt2t] = [lang.name]
     language_names.append(f"{lang.name}")
 
 
@@ -90,7 +80,7 @@ class Translate(commands.Cog):
             lang = iso639.Lang(to)
         except InvalidLanguageValue:
             return await ctx.followup.send("Invalid language", ephemeral=True)
-        if not (lang.pt1 or lang.pt2b or lang.pt2t):
+        if not lang.pt1:
             return await ctx.followup.send("Invalid language", ephemeral=True)
         response = await client.chat.completions.create(
             model="gpt-4",
