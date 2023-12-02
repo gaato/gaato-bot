@@ -7,13 +7,15 @@ from typing import List, Optional, Tuple
 
 import aiohttp
 import discord
-import openai
 import requests
 from discord.ext import commands
 from discord.interactions import Interaction
 from iso639 import Lang
+from openai import AsyncOpenAI
 
 from .. import DeleteButton, LimitedSizeDict
+
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 URL = "https://wandbox.org/api/"
 BASE_DIR = pathlib.Path(__file__).parent.parent
@@ -25,8 +27,6 @@ c = conn.cursor()
 c.execute(
     "CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)"
 )
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
 
 def get_autocomplete_languages() -> List[str]:
@@ -193,7 +193,7 @@ class ExplainButton(discord.ui.Button):
             )
             await interaction.followup.send(embed=embed, ephemeral=True)
             return
-        response = openai.ChatCompletion.create(
+        response = await client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {
@@ -212,7 +212,7 @@ class ExplainButton(discord.ui.Button):
         )
         embed = discord.Embed(
             title="Explanation by AI",
-            description=response["choices"][0]["message"]["content"].strip(),
+            description=response.choices[0].message.content.strip(),
         )
         await interaction.followup.send(embed=embed)
 

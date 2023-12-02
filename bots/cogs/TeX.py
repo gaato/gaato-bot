@@ -8,10 +8,12 @@ from typing import Optional, Tuple, Union
 import aiohttp
 import discord
 import dotenv
-import openai
 from discord.ext import commands
+from openai import AsyncOpenAI
 
 from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
+
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 dotenv.load_dotenv(verbose=True)
 
@@ -24,20 +26,18 @@ c.execute(
 )
 c.execute("CREATE TABLE IF NOT EXISTS tex_ai (author_id INTEGER, time INTEGER)")
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
 
-
-def fix_latex_error(
+async def fix_latex_error(
     latex_formula,
     error_message,
 ):
     prompt = f"LaTeX formula: {latex_formula}\nError message: {error_message}\nPlease provide the corrected LaTeX formula in the following format: \\( \\text{{[Your LaTeX formula here]}} \\)"
-    response = openai.ChatCompletion.create(
+    response = await client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=50,
     )
-    full_response = response["choices"][0]["message"]["content"].strip()
+    full_response = response.choices[0].message.content.strip()
     start_idx = full_response.find("\\(")
     end_idx = full_response.find("\\)")
     if start_idx != -1 and end_idx != -1:
@@ -147,7 +147,7 @@ class AIButton(discord.ui.Button):
             return
         latex_formula = result[3]
         error_message = result[5]
-        fixed_formula = fix_latex_error(latex_formula, error_message)
+        fixed_formula = await fix_latex_error(latex_formula, error_message)
         content, embed, file, error = await respond_core(
             interaction.user,
             fixed_formula,
@@ -323,7 +323,7 @@ class TeX(commands.Cog):
     async def aitex(self, ctx: commands.Context, *, code: str):
         """LaTeX to image (in math mode)"""
         with ctx.typing():
-            response = openai.ChatCompletion.create(
+            response = await client.chat.completions.create(
                 model="gpt-4",
                 messages=[
                     {
@@ -336,9 +336,7 @@ class TeX(commands.Cog):
                 ],
                 max_tokens=50,
             )
-        m = await self.respond(
-            ctx, response["choices"][0]["message"]["content"].strip(), False
-        )
+        m = await self.respond(ctx, response.choices[0].message.content.strip(), False)
         self.user_message_id_to_bot_message[ctx.message.id] = m
 
     @discord.slash_command(
@@ -409,7 +407,7 @@ class TeX(commands.Cog):
         spoiler: bool = False,
     ):
         await ctx.defer()
-        response = openai.ChatCompletion.create(
+        response = await client.chat.completions.create(
             model="gpt-4",
             messages=[
                 {
@@ -422,9 +420,7 @@ class TeX(commands.Cog):
             ],
             max_tokens=50,
         )
-        await self.respond(
-            ctx, response["choices"][0]["message"]["content"].strip(), spoiler
-        )
+        await self.respond(ctx, response.choices[0].message.content.strip(), spoiler)
 
 
 def setup(bot):
