@@ -1,38 +1,46 @@
 import os
-import uuid
-from typing import List
 
-import aiohttp
-import dotenv
 import discord
-import requests
-from discord.ext import commands, pages
+import dotenv
+import iso639
+from discord.ext import commands
+from iso639.exceptions import InvalidLanguageValue
+from openai import AsyncOpenAI
 
 from .. import DeleteButton
 
 dotenv.load_dotenv(verbose=True)
-BASE_URL = "https://api.cognitive.microsofttranslator.com"
-
-# get langage code list
-params = {"api-version": "3.0", "scope": "translation"}
-headers = {
-    "Ocp-Apim-Subscription-Key": os.environ.get("TRANSLATOR_TEXT_SUBSCRIPTION_KEY"),
-    "Ocp-Apim-Subscription-Region": "japaneast",
-    "Content-type": "application/json",
-}
-r = requests.get(f"{BASE_URL}/languages", params=params, headers=headers)
-r.raise_for_status()
-result = r.json()
-language_codes = list(result["translation"].keys())
 
 
-def auto_complete_language(ctx: discord.AutocompleteContext) -> List[str]:
-    return list(
-        filter(
-            lambda language_code: language_code.startswith(ctx.value.lower()),
-            language_codes,
-        )
-    )
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+two_letter_codes: dict[str, list[str]] = {}
+three_letter_codes: dict[str, list[str]] = {}
+language_names: list[str] = []
+for lang in iso639.iter_langs():
+    if not lang.pt1:
+        continue
+    if lang.pt1:
+        if lang.pt1 in two_letter_codes:
+            two_letter_codes[lang.pt1].append(lang.name)
+        else:
+            two_letter_codes[lang.pt1] = [lang.name]
+    language_names.append(f"{lang.name}")
+
+
+def autocomplete_language(ctx: discord.AutocompleteContext) -> list[str]:
+    input_value = ctx.value.lower()
+    if len(input_value) <= 1:
+        return []
+    elif len(input_value) == 2:
+        return two_letter_codes.get(input_value, [])
+    elif len(input_value) == 3:
+        return three_letter_codes.get(input_value, [])
+    else:
+        matching_languages = [
+            name for name in language_names if name.lower().startswith(input_value)
+        ]
+        return sorted(matching_languages, key=len)[:30]
 
 
 class Translate(commands.Cog):
@@ -60,66 +68,52 @@ class Translate(commands.Cog):
                 description_localizaitons={
                     "ja_JP": "翻訳先の言語",
                 },
+                autocomplete=autocomplete_language,
                 required=True,
-                autocomplete=auto_complete_language,
-            ),
-            discord.Option(
-                name="from",
-                description="Language to translate from",
-                description_localizaitons={
-                    "ja_JP": "翻訳元の言語",
-                },
-                required=False,
-                autocomplete=auto_complete_language,
             ),
         ],
     )
-    async def translate(
-        self, ctx: discord.ApplicationContext, text: str, to: str, from_: str = None
-    ):
-        print("translate")
-        key = os.environ.get("TRANSLATOR_TEXT_SUBSCRIPTION_KEY")
-        endpoint = BASE_URL + "/translate"
-        params = {
-            "api-version": "3.0",
-            "to": to,
-        }
-        if from_:
-            params["from"] = from_
-        headers = {
-            "Ocp-Apim-Subscription-Key": key,
-            "Ocp-Apim-Subscription-Region": "japaneast",
-            "Content-type": "application/json",
-            "X-ClientTraceId": str(uuid.uuid4()),
-        }
-        body = [{"text": text}]
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                endpoint, params=params, headers=headers, json=body
-            ) as r:
-                if r.status != 200:
-                    return await ctx.respond(f"Error: {r.status}")
-                result = await r.json()
+    async def translate(self, ctx: discord.ApplicationContext, text: str, to: str):
+        """Translate text"""
+        await ctx.defer()
+        try:
+            lang = iso639.Lang(to)
+        except InvalidLanguageValue:
+            return await ctx.followup.send("Invalid language", ephemeral=True)
+        if not lang.pt1:
+            return await ctx.followup.send("Invalid language", ephemeral=True)
+        response = await client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {
+                    "role": "system",
+                    "content": "This is a direct translation task. "
+                    f"Translate the following text to {lang.name}. "
+                    "Do not add any additional comments or language indicators.",
+                },
+                {
+                    "role": "user",
+                    "content": text,
+                },
+            ],
+            max_tokens=2000,
+        )
         embed = discord.Embed(
-            title="Translation",
-            color=0x008000,
+            title="Translate",
+            color=discord.Color.blurple(),
         )
         embed.add_field(
-            name=f'[{from_ if from_ else result[0]["detectedLanguage"]["language"]}]',
-            value=f"{text}",
+            name=f"Original text",
+            value=text,
             inline=False,
         )
         embed.add_field(
-            name=f"[{to}]",
-            value=f'{result[0]["translations"][0]["text"]}',
+            name=f"Translated to {to}",
+            value=response.choices[0].message.content,
             inline=False,
         )
-        embed.set_author(
-            name=ctx.author.display_name,
-            icon_url=ctx.author.display_avatar.url,
-        )
-        view = discord.ui.View(DeleteButton(ctx.author), timeout=None)
-        await ctx.respond(embed=embed, view=view)
+        view = discord.ui.View(DeleteButton(ctx.user))
+        await ctx.followup.send(embed=embed, view=view)
 
 
 def setup(bot):
