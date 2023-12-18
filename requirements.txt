@@ -88,7 +88,9 @@ protobuf==3.19.4
     #   google-api-core
     #   googleapis-common-protos
 py-cord[voice]==2.4.1
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   py-cord
 pyasn1==0.4.8
     # via
     #   pyasn1-modules
