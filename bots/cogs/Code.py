@@ -1,7 +1,6 @@
 import io
 import pathlib
 import re
-import sqlite3
 from typing import List, Optional, Tuple
 
 import aiohttp
@@ -16,12 +15,12 @@ URL = "https://wandbox.org/api/"
 BASE_DIR = pathlib.Path(__file__).parent.parent
 
 
-dbname = BASE_DIR.parent / "db.sqlite3"
-conn = sqlite3.connect(dbname, check_same_thread=False)
-c = conn.cursor()
-c.execute(
-    "CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)"
-)
+# dbname = BASE_DIR.parent / "db.sqlite3"
+# conn = sqlite3.connect(dbname, check_same_thread=False)
+# c = conn.cursor()
+# c.execute(
+#     "CREATE TABLE IF NOT EXISTS code (message_id INTEGER, author_id INTEGER, language TEXT, code TEXT, stdin TEXT)"
+# )
 
 
 def get_autocomplete_languages() -> List[str]:
@@ -64,9 +63,9 @@ async def get_languages() -> dict:
                             result,
                         )
                     )
-                    languages_dict[
-                        language_name.lower().replace(" ", "")
-                    ] = language_information["name"]
+                    languages_dict[language_name.lower().replace(" ", "")] = (
+                        language_information["name"]
+                    )
     return languages_dict
 
 
@@ -137,23 +136,23 @@ async def run_core(
     return embed, files
 
 
-class EditButton(discord.ui.Button):
-    def __init__(self, label="Edit", style=discord.ButtonStyle.primary, **kwargs):
-        super().__init__(label=label, style=style, **kwargs)
+# class EditButton(discord.ui.Button):
+#     def __init__(self, label="Edit", style=discord.ButtonStyle.primary, **kwargs):
+#         super().__init__(label=label, style=style, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction):
-        c = conn.cursor()
-        c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
-        result = c.fetchone()
-        if result is None:
-            embed = discord.Embed(
-                title="Error", description="Not found.", color=0xFF0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        await interaction.response.send_modal(
-            RunModal(result[2], code=result[3], stdin=result[4])
-        )
+#     async def callback(self, interaction: discord.Interaction):
+#         c = conn.cursor()
+#         c.execute("SELECT * FROM code WHERE message_id = ?", (interaction.message.id,))
+#         result = c.fetchone()
+#         if result is None:
+#             embed = discord.Embed(
+#                 title="Error", description="Not found.", color=0xFF0000
+#             )
+#             await interaction.response.send_message(embed=embed, ephemeral=True)
+#             return
+#         await interaction.response.send_modal(
+#             RunModal(result[2], code=result[3], stdin=result[4])
+#         )
 
 
 # class ViewCodeButton(discord.ui.Button):
@@ -234,22 +233,20 @@ class RunModal(discord.ui.Modal):
             name="Code",
             value=f"```{self.language}\n{self.children[0].value}\n```",
         )
-        view = discord.ui.View(
-            DeleteButton(interaction.user), EditButton(), timeout=None
-        )
+        view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
         m = await interaction.followup.send(
             embed=embed, files=files, view=view, wait=True
         )
-        c.execute(
-            "INSERT INTO code VALUES (?, ?, ?, ?, ?)",
-            (
-                m.id,
-                interaction.user.id,
-                self.language,
-                self.children[0].value,
-                self.children[1].value,
-            ),
-        )
+        # c.execute(
+        #     "INSERT INTO code VALUES (?, ?, ?, ?, ?)",
+        #     (
+        #         m.id,
+        #         interaction.user.id,
+        #         self.language,
+        #         self.children[0].value,
+        #         self.children[1].value,
+        #     ),
+        # )
 
 
 class Code(commands.Cog):

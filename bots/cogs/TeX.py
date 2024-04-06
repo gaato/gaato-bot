@@ -1,22 +1,20 @@
-import base64
 import io
 import pathlib
-import sqlite3
 from typing import Optional, Tuple
 
 import aiohttp
 import discord
 from discord.ext import commands
 
-from .. import SUPPORT_SERVER_LINK, DeleteButton, LimitedSizeDict
+from .. import DeleteButton, LimitedSizeDict
 
 BASE_DIR = pathlib.Path(__file__).parent.parent
-dbname = BASE_DIR.parent / "db.sqlite3"
-conn = sqlite3.connect(dbname, check_same_thread=False)
-c = conn.cursor()
-c.execute(
-    "CREATE TABLE IF NOT EXISTS tex (message_id INTEGER, author_id INTEGER, code TEXT, spoiler INTEGER)"
-)
+# dbname = BASE_DIR.parent / "db.sqlite3"
+# conn = sqlite3.connect(dbname, check_same_thread=False)
+# c = conn.cursor()
+# c.execute(
+#     "CREATE TABLE IF NOT EXISTS tex (message_id INTEGER, author_id INTEGER, code TEXT, spoiler INTEGER)"
+# )
 
 
 async def respond_core(
@@ -55,23 +53,23 @@ async def respond_core(
                 return "", embed, None
 
 
-class EditButton(discord.ui.Button):
-    def __init__(self, label="Edit", style=discord.ButtonStyle.primary, **kwargs):
-        super().__init__(label=label, style=style, **kwargs)
+# class EditButton(discord.ui.Button):
+#     def __init__(self, label="Edit", style=discord.ButtonStyle.primary, **kwargs):
+#         super().__init__(label=label, style=style, **kwargs)
 
-    async def callback(self, interaction: discord.Interaction):
-        c = conn.cursor()
-        c.execute("SELECT * FROM tex WHERE message_id = ?", (interaction.message.id,))
-        result = c.fetchone()
-        if result is None:
-            embed = discord.Embed(
-                title="Error", description="Not found.", color=0xFF0000
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-            return
-        await interaction.response.send_modal(
-            TeXModal(spoiler=bool(result[3]), value=result[2])
-        )
+#     async def callback(self, interaction: discord.Interaction):
+#         c = conn.cursor()
+#         c.execute("SELECT * FROM tex WHERE message_id = ?", (interaction.message.id,))
+#         result = c.fetchone()
+#         if result is None:
+#             embed = discord.Embed(
+#                 title="Error", description="Not found.", color=0xFF0000
+#             )
+#             await interaction.response.send_message(embed=embed, ephemeral=True)
+#             return
+#         await interaction.response.send_modal(
+#             TeXModal(spoiler=bool(result[3]), value=result[2])
+#         )
 
 
 class TeXModal(discord.ui.Modal):
@@ -102,9 +100,7 @@ class TeXModal(discord.ui.Modal):
             name="Code",
             value=f"```tex\n{self.children[0].value}\n```",
         )
-        view = discord.ui.View(
-            DeleteButton(interaction.user), EditButton(), timeout=None
-        )
+        view = discord.ui.View(DeleteButton(interaction.user), timeout=None)
         if file is None:
             m = await interaction.followup.send(
                 content=content, embed=embed, view=view, wait=True
