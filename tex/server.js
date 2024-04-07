@@ -26,7 +26,7 @@ async function convertToSvg(latex) {
     const node = doc.convert(latex, { display: true, em: 16, ex: 8, containerWidth: 80 });
 
     const svgString = adaptor.outerHTML(node);
-    const svgTag = svgString.match(/<svg[^>]*>[\s\S]*?<\/svg>/g)[0];
+    const svgTag = svgString.match(/<svg[^>]*>[\s\S]*<\/svg>/g)[0];
 
     if (svgTag.includes('data-mjx-error')) {
       const errorTitle = svgTag.match(/title="([^"]+)"/)[1];
