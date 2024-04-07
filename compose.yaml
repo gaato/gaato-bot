@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  coderunbot:
+    build: discord
+    env_file: .env
+  gaato-bot:
+    build: discord
+    env_file: .env
+    environment:
+      - GAATO_BOT=1
+  tex:
+    build: tex
