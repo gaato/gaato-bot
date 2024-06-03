@@ -1,8 +1,7 @@
 import os
 
-from dotenv import load_dotenv
-
 from bots.core.bot import Bot
+from dotenv import load_dotenv
 
 load_dotenv(verbose=True)
 
@@ -15,7 +14,7 @@ GAATO_BOT_COGS = [
     "bots.cogs.Code",
     "bots.cogs.Privacy",
     "bots.cogs.Wolfram",
-    # "bots.cogs.Misc",
+    "bots.cogs.Misc",
     "bots.cogs.Translate",
 ]
 
