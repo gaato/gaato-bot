@@ -1,5 +1,7 @@
 import os
 import pathlib
+from collections import defaultdict
+from datetime import datetime, timedelta
 
 from discord.ext import commands
 from openai import AsyncOpenAI
@@ -20,6 +22,7 @@ client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 class Misc(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.mention_times = defaultdict(list)
         # self.tokenizer_obj = dictionary.Dictionary().create()
 
     async def fetch_message_history(self, channel: discord.TextChannel, limit: int = 5):
@@ -28,16 +31,28 @@ class Misc(commands.Cog):
         for message in history:
             messages.append({
                 "role": "user" if message.author != self.bot.user else "assistant",
-                "content": f"Author:\n{message.author.mention}\nContent:\n{message.content}"
+                "content": f"Author: {message.author.mention}\n\nContent:\n{message.content}"
             })
         messages.reverse()
         return messages
+
+    def is_mention_limit_exceeded(self, user_id: int, time_limit: int = 60, max_mentions: int = 3):
+        now = datetime.now()
+        mention_times = self.mention_times[user_id]
+        # Remove mentions older than time_limit seconds
+        self.mention_times[user_id] = [time for time in mention_times if now - time < timedelta(seconds=time_limit)]
+        # Check if mention limit is exceeded
+        print(self.mention_times)
+        return len(self.mention_times[user_id]) >= max_mentions
 
     @commands.Cog.listener("on_message")
     async def on_mentioned(self, message: discord.Message):
         if message.author.bot:
             return
         if self.bot.user.mentioned_in(message):
+            if self.is_mention_limit_exceeded(message.author.id):
+                return
+            self.mention_times[message.author.id].append(datetime.now())
             async with message.channel.typing():
                 history = await self.fetch_message_history(message.channel, limit=5)
                 history.append({
@@ -49,7 +64,9 @@ class Misc(commands.Cog):
                     messages=[
                         {
                             "role": "system",
-                            "content": "あなたはあるDiscordサーバーのメンバーです。以下は直近のメッセージ履歴です。そのサーバーのメンバーらしくカジュアルに返信してください。",
+                            "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
+                            "以下は直近のメッセージ履歴です。"
+                            "そのサーバーのメンバーらしくカジュアルに返信してください。",
                         },
                         *history
                     ],
