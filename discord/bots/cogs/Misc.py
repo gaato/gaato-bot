@@ -25,7 +25,7 @@ class Misc(commands.Cog):
         self.mention_times = defaultdict(list)
         # self.tokenizer_obj = dictionary.Dictionary().create()
 
-    async def fetch_message_history(self, channel: discord.TextChannel, limit: int = 5):
+    async def fetch_message_history(self, channel: discord.TextChannel, limit: int = 10):
         history = await channel.history(limit=limit).flatten()
         messages = []
         for message in history:
@@ -54,7 +54,7 @@ class Misc(commands.Cog):
                 return
             self.mention_times[message.author.id].append(datetime.now())
             async with message.channel.typing():
-                history = await self.fetch_message_history(message.channel, limit=5)
+                history = await self.fetch_message_history(message.channel, limit=10)
                 history.append({
                     "role": "user",
                     "content": message.content
