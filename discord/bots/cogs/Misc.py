@@ -49,14 +49,14 @@ class Misc(commands.Cog):
     async def on_mentioned(self, message: discord.Message):
         if message.author.bot:
             return
-        if self.bot.user.mentioned_in(message):
+        if str(self.bot.user.id) in message.content:
             if self.is_mention_limit_exceeded(message.author.id):
                 return
             self.mention_times[message.author.id].append(datetime.now())
             async with message.channel.typing():
                 history = await self.fetch_message_history(message.channel, limit=10)
                 history.append({
-                    "role": "user",
+                    "role": "assistant" if message.author.id == self.bot.user.id else "user",
                     "content": message.content
                 })
                 response = await client.chat.completions.create(
@@ -66,7 +66,7 @@ class Misc(commands.Cog):
                             "role": "system",
                             "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
                             "以下は直近のメッセージ履歴です。"
-                            "そのサーバーのメンバーらしくカジュアルに返信してください。",
+                            "カジュアルでユーモアに溢れた返信をしてください。",
                         },
                         *history
                     ],
