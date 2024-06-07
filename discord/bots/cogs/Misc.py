@@ -57,20 +57,34 @@ class Misc(commands.Cog):
                 history = await self.fetch_message_history(message.channel, limit=10)
                 history.append({
                     "role": "assistant" if message.author.id == self.bot.user.id else "user",
-                    "content": message.content
+                    "content": message.content,
                 })
-                response = await client.chat.completions.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
-                            "以下は直近のメッセージ履歴です。"
-                            "カジュアルでユーモアに溢れた返信をしてください。",
-                        },
-                        *history
-                    ],
-                )
+                if message.author.id == 572432137035317249:  # gaato.
+                    response = await client.chat.completions.create(
+                        model=   "gpt-4-turbo",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
+                                "以下の様々なユーザーによる直近のメッセージ履歴を参考に、"
+                                "あなたがメンションされている最後のメッセージに返信してください。"
+                            },
+                            *history
+                        ],
+                    )
+                else:
+                    response = await client.chat.completions.create(
+                        model=   "gpt-3.5-turbo",
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
+                                "以下は直近のメッセージ履歴です。"
+                                "一言で返信してください。"
+                            },
+                            *history
+                        ],
+                    )
                 allowed_mentions = discord.AllowedMentions.none()
                 allowed_mentions.replied_user = True
                 await message.reply(response.choices[0].message.content, allowed_mentions=allowed_mentions)
