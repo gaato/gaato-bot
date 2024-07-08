@@ -31,7 +31,7 @@ class Misc(commands.Cog):
         for message in history:
             messages.append({
                 "role": "user" if message.author != self.bot.user else "assistant",
-                "content": f"Author: {message.author.mention}\n\nContent:\n{message.content}"
+                "content": f"{message.content}"
             })
         messages.reverse()
         return messages
@@ -65,7 +65,7 @@ class Misc(commands.Cog):
                         messages=[
                             {
                                 "role": "system",
-                                "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
+                                "content": f"これはDiscordでのチャットです。"
                                 "以下の様々なユーザーによる直近のメッセージ履歴を参考に、"
                                 "あなたがメンションされている最後のメッセージに返信してください。"
                             },
@@ -78,7 +78,7 @@ class Misc(commands.Cog):
                         messages=[
                             {
                                 "role": "system",
-                                "content": f"あなたはあるDiscordサーバーのメンバーである{self.bot.user.mention}です。"
+                                "content": f"これはDiscordのチャットです。"
                                 "以下は直近のメッセージ履歴です。"
                                 "一言で返信してください。"
                             },
