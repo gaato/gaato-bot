@@ -72,6 +72,10 @@ class Translate(commands.Cog):
                 required=True,
             ),
         ],
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install
+        },
     )
     async def translate(self, ctx: discord.ApplicationContext, text: str, to: str):
         """Translate text"""

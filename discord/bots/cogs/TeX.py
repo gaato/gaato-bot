@@ -140,6 +140,10 @@ class TeX(commands.Cog):
                 default=False,
             ),
         ],
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install
+        },
     )
     async def tex_slash(
         self,

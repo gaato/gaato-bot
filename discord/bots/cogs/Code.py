@@ -289,6 +289,10 @@ class Code(commands.Cog):
                 autocomplete=auto_complete_language,
             )
         ],
+        integration_types={
+            discord.IntegrationType.guild_install,
+            discord.IntegrationType.user_install
+        },
     )
     async def run_slash(self, ctx: discord.ApplicationContext, language: str):
         await ctx.send_modal(RunModal(language, title="Run code"))
